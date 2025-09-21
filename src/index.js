@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import './index.css';
+import './css/index.css';
 import reportWebVitals from './reportWebVitals';
-import LoginPlugin from './utils/LoginPlugin';
+import LoginPlugin from './view/auth/LoginPlugin';
 import ChatrankaPlug from './view/chatranka/ChatrankaPlug';
 import { checkLoginStatus } from './utils/login';
 
@@ -12,7 +12,8 @@ const App = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={
-          checkLoginStatus() ? <Navigate to="/chatranka" /> : <LoginPlugin />
+          checkLoginStatus() ? <Navigate to="/chatranka" /> : 
+          <LoginPlugin onLoginSuccess={() => window.location.reload()} />
         } />
         <Route path="/chatranka" element={
           checkLoginStatus() ? <ChatrankaPlug /> : <Navigate to="/login" />

@@ -10,7 +10,7 @@ const ChatrankaPlug = ({ pluginData, onPluginEvent }) => {
   }, []);
   return (
     <Box>
-      {/* Chatranka 主界面内容 */}
+      333333
     </Box>
   );
 };

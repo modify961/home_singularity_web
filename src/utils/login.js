@@ -1,5 +1,5 @@
 export const checkLoginStatus = () => {
-  return localStorage.getItem('isLoggedIn') === 'true';
+  return false // localStorage.getItem('isLoggedIn') === 'true';
 };
 
 export const redirectToLogin = () => {
