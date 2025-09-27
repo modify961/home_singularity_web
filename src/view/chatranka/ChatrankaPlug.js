@@ -1,13 +1,10 @@
 import React, { useEffect } from 'react';
 import { Box } from '@mui/material';
-import { checkLoginStatus, redirectToLogin } from '../../utils/login';
+import { useAuth } from '../../utils/AuthContext';
 
 const ChatrankaPlug = ({ pluginData, onPluginEvent }) => {
-  useEffect(() => {
-    if (!checkLoginStatus()) {
-      redirectToLogin();
-    }
-  }, []);
+  const { isAuthenticated, isLoading } = useAuth();
+  
   return (
     <Box>
       333333

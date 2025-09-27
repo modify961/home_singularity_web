@@ -1,26 +1,57 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../utils/AuthContext';
 import '../../css/login.css';
 
-const LoginPlugin = ({ onLoginSuccess }) => {
+const LoginPlugin = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!username || !password) {
       setError('请输入用户名和密码');
       return;
     }
-    debugger
-    // 简单模拟登录验证
-    if (username === 'admin' && password === '123456') {
-      localStorage.setItem('isLoggedIn', 'true');
-      onLoginSuccess?.();
-    } else {
-      setError('用户名或密码错误');
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const loginRequest = {
+        "user_code": username,
+        "password": password
+      };
+      
+      const response = await window.request("/login", "/login", "POST", loginRequest, {});
+      
+      if (response && response.code === 200) {
+        const status = response.data.status;
+        
+        if (status) {
+          const token = response.data.token;
+          const user_info = response.data.user_info;
+          
+          // 使用 AuthContext 的 login 方法
+          login(token, user_info);
+          navigate('/chatranka');
+        } else {
+          setError(response.data.message || '登录失败');
+        }
+      } else {
+        setError('用户名或密码错误');
+      }
+    } catch (err) {
+      console.error('登录请求出错:', err);
+      setError('登录请求失败，请稍后再试');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
 
   return (
     <Box sx={{ 
@@ -68,6 +99,7 @@ const LoginPlugin = ({ onLoginSuccess }) => {
         onClick={handleLogin}
         fullWidth
         size="large"
+        disabled={isLoading}
         sx={{
           background: 'linear-gradient(45deg, #00dbde, #fc00ff)',
           '&:hover': {
@@ -75,7 +107,7 @@ const LoginPlugin = ({ onLoginSuccess }) => {
           }
         }}
       >
-        登录
+        {isLoading ? '登录中...' : '登录'}
       </Button>
     </Box>
   );

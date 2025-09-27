@@ -1,5 +1,4 @@
 const API_BASE_URL = window._CONFIG['BASE_URL'];
-// const API_BASE_URL = "http://39.106.253.97:8600";
 
 window.chatWithLLMSteam = async (url,initInfo, onProgress, onComplete) => {
     const response = await fetch(`${API_BASE_URL}${url}`, {
