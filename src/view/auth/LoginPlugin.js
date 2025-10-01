@@ -38,7 +38,7 @@ const LoginPlugin = () => {
           
           // 使用 AuthContext 的 login 方法
           login(token, user_info);
-          navigate('/chatranka');
+          navigate('/ahatapp');
         } else {
           setError(response.data.message || '登录失败');
         }

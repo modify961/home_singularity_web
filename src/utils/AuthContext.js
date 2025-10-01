@@ -57,13 +57,10 @@ export const AuthProvider = ({ children }) => {
 
   // 登录函数
   const login = (token, user, expireMinutes = 30) => {
-    // expireMinutes 可以调整，如 30 分钟
     const expireTime = Date.now() + expireMinutes * 60 * 1000;
-
     sessionStorage.setItem('token', token);
     sessionStorage.setItem('user_info', JSON.stringify(user));
     sessionStorage.setItem('token_expire', expireTime.toString());
-
     setIsAuthenticated(true);
     setUserInfo(user);
     if (window.BroadcastChannel) {

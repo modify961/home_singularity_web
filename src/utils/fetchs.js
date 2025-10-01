@@ -49,7 +49,8 @@ window.chatWithLLMSteam = async (url,initInfo, onProgress, onComplete) => {
     }
 };
 
-window.request = async (basePath, url, method = "GET", body = null, headers = {}, stream = false) => {
+// 定义全局 request 函数
+const request = async (basePath, url, method = "GET", body = null, headers = {}, stream = false) => {
     headers = {
         "Content-Type": "application/json",
         'Authorization': 'sk-szyd-asdf098765!!',
@@ -93,3 +94,7 @@ window.request = async (basePath, url, method = "GET", body = null, headers = {}
     
     return response.json();
 };
+
+// 将函数挂载到全局对象
+window.request = request;
+global.request = request; // 兼容 Node.js 环境

@@ -5,7 +5,7 @@ import './css/index.css';
 import "./utils/fetchs";
 import reportWebVitals from './reportWebVitals';
 import LoginPlugin from './view/auth/LoginPlugin';
-import ChatrankaPlug from './view/chatranka/ChatrankaPlug';
+import ChatApp from './components/ChatApp';
 import { AuthProvider } from './utils/AuthContext';
 import ProtectedRoute from './utils/ProtectedRoute';
 import PublicRoute from './utils/PublicRoute';
@@ -23,11 +23,11 @@ const App = () => {
           
           {/* 受保护路由 - 需要登录 */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/chatranka" element={<ChatrankaPlug />} />
+            <Route path="/chatapp" element={<ChatApp />} />
           </Route>
           
           {/* 默认路由重定向 */}
-          <Route path="*" element={<Navigate to="/chatranka" replace />} />
+          <Route path="*" element={<Navigate to="/chatapp" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

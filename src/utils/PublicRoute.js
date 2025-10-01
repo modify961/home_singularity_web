@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
 // 公共路由组件
-const PublicRoute = ({ redirectPath = '/chatranka' }) => {
+const PublicRoute = ({ redirectPath = '/ahatapp' }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
