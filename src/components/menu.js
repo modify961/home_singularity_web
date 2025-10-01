@@ -26,25 +26,9 @@ const ToolMenu = ({ onMenuClick, width = 20 }) => {
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-          console.error('未找到用户信息');
-          return;
-        }
-
-        const user = JSON.parse(userStr);
-        if (!user.id) {
-          console.error('用户信息中未找到ID');
-          return;
-        }
-
-        const response = await initMenu(user.id.toString());
+        const response = await initMenu();
         if (response && response.data) {
-          let menus_in = response.data.menus_in;
-          let mcps = response.data.mcps;
-          mcps = mcps || []
-          localStorage.setItem('mcps_list', JSON.stringify(mcps));
-          setMenuItems(menus_in);
+          setMenuItems(response.data);
         }
       } catch (error) {
         console.error('获取菜单数据失败:', error);
@@ -76,7 +60,6 @@ const ToolMenu = ({ onMenuClick, width = 20 }) => {
     // 处理常规菜单项
     let pluginCallInfo = {
       "id": "",
-      "tip": menuItem.tip,
       "tool_code": menuItem.plugin_code,
       "tool_name": menuItem.text,
       "tool_model": menuItem.plugin_model,
@@ -94,23 +77,13 @@ const ToolMenu = ({ onMenuClick, width = 20 }) => {
   };
 
   const handleLogout = () => {
-    // 清除登录状态
     localStorage.removeItem('token');
-    // 是否开启验证登录
     if (window._CONFIG['ENABLE_LOGIN']) {
-      // 重定向到后端的logout路由
       window.location.href = `${window._CONFIG['BASE_URL']}/oauth2client/logout`
     } else {
-      // 重定向到登录页面
       window.location.href = '/login';
     }
   };
-
-  // 处理系统设置弹窗关闭
-  const handleSettingsClose = () => {
-    setSettingsOpen(false);
-  };
-
 
   // 将数字转换为百分比字符串
   const widthPercentage = `${width}%`;
@@ -118,7 +91,7 @@ const ToolMenu = ({ onMenuClick, width = 20 }) => {
   return (
     <Box sx={{ width: widthPercentage, height: '100vh', display: 'flex', backgroundColor: 'grey.200', flexDirection: 'column', borderRight: '1px solid #ddd' }}>
       {/* 中间列表 */}
-      <List sx={{ flexGrow: 1, padding: '8px' }}>
+      <List sx={{ flexGrow: 1, padding: '8px', overflowY: 'auto' }}>
         {menuItems.map((item, index) => (
           <ListItem
             button
@@ -150,7 +123,7 @@ const ToolMenu = ({ onMenuClick, width = 20 }) => {
 
       <Divider />
 
-      <Box sx={{ textAlign: 'center' }}>
+      <Box sx={{ textAlign: 'center', marginTop: 'auto' }}>
         <IconButton
           onClick={handleMenuOpen}
           sx={{

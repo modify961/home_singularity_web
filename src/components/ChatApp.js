@@ -24,7 +24,7 @@ function ChatApp() {
   const currentPlugRef = useRef({});
 
   const handleMenuClick = (menuItem) => {
-    handMessageWithOutTool(menuItem.tip,menuItem)
+    handMessageWithOutTool("",menuItem)
     setDrawerOpen(false)
   };
   const handlePluginEvent = (pluginKey, eventName, eventData) => {
@@ -67,10 +67,9 @@ function ChatApp() {
   };
   const closeToolMenu= () => {
     setShowFunctionMenu(true);
-    setDrawerOpen(true);
   };
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
+    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'white' }}>
       <Drawer
         anchor="left"
         open={drawerOpen}
@@ -78,6 +77,7 @@ function ChatApp() {
           '& .MuiDrawer-paper': {
             width: '10%',
             boxSizing: 'border-box',
+            overflow: 'hidden',
           },
         }}
         onClose={() => setDrawerOpen(false)}
@@ -108,7 +108,7 @@ function ChatApp() {
         </Box>
       )}
       {!showFunctionMenu &&
-        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column',  overflow: 'hidden' }}>
           <Box sx={{
             height: '30px',
             paddingTop: '10px',
@@ -138,7 +138,7 @@ function ChatApp() {
               </Box>
             )}
           </Box>
-          <Box sx={{ height: 'calc(100vh - 40px)', width: '100%', overflowY: 'auto', p: "10px", paddingBottom:"0px" }}>
+          <Box sx={{ height: 'calc(100vh - 40px)', width: '100%', overflowY: 'auto', paddingBottom:"0px" }}>
             <PluginWrapper
               plugin={leftPlugin.plugin}
               pluginData={leftPlugin.pluginData}

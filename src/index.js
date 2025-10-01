@@ -9,6 +9,7 @@ import ChatApp from './components/ChatApp';
 import { AuthProvider } from './utils/AuthContext';
 import ProtectedRoute from './utils/ProtectedRoute';
 import PublicRoute from './utils/PublicRoute';
+import { DialogProvider } from './components/tips/DialogProvider';
 
 
 const App = () => {
@@ -36,9 +37,10 @@ const App = () => {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <DialogProvider>
+      <App />
+  </DialogProvider>
+
 );
 
 reportWebVitals();
