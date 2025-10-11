@@ -3,9 +3,20 @@ import { Box, IconButton, Typography, Paper } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
 import ChatInputPlug from './component/ChatInputPlug';
+import { styled } from '@mui/material/styles';
 
 const SSE_API_URL = '/chat_to_aiden/chat_to_aiden_steam'
+const MessageContent = styled(Typography)(() => ({
+  '& p': {
+    marginBlockEnd: '0px !important',
+    marginBlockStart: '0px !important',
+  },
+}));
+
+
 const AidenOntology = ({ pluginData, onPluginEvent }) => {
 
   const [messages, setMessages] = useState(() => {
@@ -93,10 +104,24 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
           ) : (
             <Box sx={{
               '& p': { m: 0 },
-              '& pre': { bgcolor: 'grey.900', color: 'common.white', p: 1, borderRadius: 1, overflowX: 'auto' },
-              '& code': { bgcolor: 'grey.200', px: 0.5, borderRadius: 0.5 }
+              '& pre': { bgcolor: '#f8f9fa', color: '#495057', p: 1, borderRadius: 1, overflowX: 'auto', border: '1px solid #e9ecef' },
+              '& code': { bgcolor: '#f8f9fa', color: '#495057', px: 0.5, py: 0.25, borderRadius: 0.5, border: '1px solid #e9ecef' }
             }}>
-              <ReactMarkdown>{msg.content || ''}</ReactMarkdown>
+              <ReactMarkdown
+                children={msg.content}
+                remarkPlugins={[remarkBreaks, remarkGfm]}
+                components={{
+                  p: ({ children }) => <MessageContent variant="body2">{children}</MessageContent>,
+                  code: ({ children }) => <code style={{ backgroundColor: '#f8f9fa', color: '#495057', padding: '2px 4px', borderRadius: '3px', fontSize: '0.875em', border: '1px solid #e9ecef' }}>{children}</code>,
+                  pre: ({ children }) => <pre style={{ backgroundColor: '#f8f9fa', color: '#495057', padding: '12px', borderRadius: '6px', overflowX: 'auto', fontSize: '0.875em', border: '1px solid #e9ecef' }}>{children}</pre>,
+                  table: ({ children }) => <table style={{ borderCollapse: 'collapse', width: '100%', margin: '16px 0' }}>{children}</table>,
+                  thead: ({ children }) => <thead style={{ backgroundColor: '#f5f5f5' }}>{children}</thead>,
+                  tbody: ({ children }) => <tbody>{children}</tbody>,
+                  tr: ({ children }) => <tr>{children}</tr>,
+                  th: ({ children }) => <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{children}</th>,
+                  td: ({ children }) => <td style={{ border: '1px solid #ddd', padding: '8px' }}>{children}</td>
+                }}
+              ></ReactMarkdown>
             </Box>
           )}
         </Paper>
