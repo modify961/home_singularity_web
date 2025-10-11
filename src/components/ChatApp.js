@@ -139,7 +139,7 @@ function ChatApp() {
               </Box>
             )}
           </Box>
-          <Box sx={{ height: 'calc(100vh - 40px)', width: '100%', overflowY: 'auto', paddingBottom:"0px" }}>
+          <Box sx={{ height: 'calc(100vh - 40px)', width: '100%', overflow: 'hidden', paddingBottom:"0px" }}>
             <PluginWrapper
               plugin={leftPlugin.plugin}
               pluginData={leftPlugin.pluginData}
