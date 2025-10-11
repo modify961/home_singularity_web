@@ -5,6 +5,7 @@ import usePluginComponent from './PluginComponent';
 import * as Icons from '@mui/icons-material';
 import ToolMenu from './menu';
 import { v4 as uuidv4 } from 'uuid';
+import PortalPlugin from './PortalPlugin';
 
 const PluginWrapper = ({ plugin, pluginData, onPluginEvent }) => {
   const PluginComponent = usePluginComponent(plugin);
@@ -84,7 +85,6 @@ function ChatApp() {
       >
         <ToolMenu onMenuClick={handleMenuClick} width={100} />
       </Drawer>
-      
       {showFunctionMenu && (
         <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
           <IconButton
@@ -94,16 +94,17 @@ function ChatApp() {
               left: 20, 
               bottom: 20,
               zIndex: 1000,
-              bgcolor: '#1976d2',
-              color: 'white', 
-              boxShadow: 3, 
-              padding: '12px', 
-              '&:hover': { bgcolor: '#1565c0' }
+              bgcolor: '#1976d2', // 蓝色背景
+              color: 'white', // 白色图标
+              boxShadow: 3, // 增强阴影效果
+              padding: '12px', // 增大按钮内边距
+              '&:hover': { bgcolor: '#1565c0' } // 悬停时深蓝色
             }}
           >
-            <Icons.Menu fontSize="large" />
+            <Icons.Menu fontSize="large" /> {/* 使用更大的图标 */}
           </IconButton>
-          <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100vh' }}>
+          <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden'}}>
+            <PortalPlugin />
           </Box>
         </Box>
       )}
