@@ -114,7 +114,8 @@ function ChatApp() {
             paddingTop: '10px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #e0e0e0'
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <IconButton

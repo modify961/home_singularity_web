@@ -1,24 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  FormControl,
-  FormLabel,
-  Select,
-  MenuItem,
-  Box
+  Dialog,DialogTitle,DialogContent,DialogActions,Button,TextField,FormControl,FormLabel,Select,MenuItem, Box
 } from '@mui/material';
-import { useDialog } from '../../../components/tips/useDialog';
+import { addOrEditRole} from '../api';
+
 const RoleInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose}) => {
-  const [formData, setFormData] = useState({
-    role_name: '',
-    role_code: '',
-    state: 1
-  });
+  const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
 
   // 生成角色编码
@@ -34,24 +21,21 @@ const RoleInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose}
   };
 
   useEffect(() => {
-    if (isOpen) {
-      if (pluginData?.role) {
-        // 编辑模式
+    if (isOpen&&pluginData&&pluginData.id) {
         setFormData({
-          role_name: pluginData.role.role_name || '',
-          role_code: pluginData.role.role_code || '',
-          state: pluginData.role.state !== undefined ? pluginData.role.state : 1
+          id: pluginData.id,
+          role_name: pluginData.role_name || '',
+          role_code: pluginData.role_code || '',
+          state: pluginData.state !== undefined ? pluginData.state : 1
         });
-      } else {
-        // 新增模式
+    }else {
         setFormData({
           role_name: '',
           role_code: generateRoleCode(),
           state: 1
         });
-      }
-      setErrors({});
     }
+    setErrors({});
   }, [pluginData, isOpen]);
 
   // 处理表单字段变化
@@ -60,7 +44,6 @@ const RoleInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose}
       ...prev,
       [field]: value
     }));
-    // 清除对应字段的错误
     if (errors[field]) {
       setErrors(prev => ({
         ...prev,
@@ -68,11 +51,8 @@ const RoleInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose}
       }));
     }
   };
-
-  // 表单验证
   const validateForm = () => {
     const newErrors = {};
-    
     if (!formData.role_name?.trim()) {
       newErrors.role_name = '角色名称不能为空';
     }
@@ -86,33 +66,9 @@ const RoleInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose}
     if (!validateForm()) {
       return;
     }
-    
-    try {
-      // 这里调用保存API
-      console.log('保存角色信息:', formData);
-      // await saveRoleInfo(formData);
-      
-      handleClose();
-    } catch (error) {
-      console.error('保存失败:', error);
-    }
+    const response = await addOrEditRole(formData);
+    onPluginEvent("refresh");
   };
-
-  // 删除处理
-  const handleDelete = async () => {
-    if (!formData.id) return;
-    
-    try {
-      // 这里调用删除API
-      console.log('删除角色:', formData.id);
-      // await deleteRole(formData.id);
-      
-      handleClose();
-    } catch (error) {
-      console.error('删除失败:', error);
-    }
-  };
-
   const handleClose = () => {
     setFormData({
       role_name: '',
@@ -186,15 +142,6 @@ const RoleInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose}
         gap: '10px'
       }}>
         <Button onClick={handleSave} variant="contained">保存</Button>
-        {pluginData?.role?.id && (
-          <Button 
-            onClick={handleDelete}
-            variant="outlined" 
-            color="error"
-          >
-            删除
-          </Button>
-        )}
         <Button onClick={handleClose} variant="outlined">取消</Button>
         
       </DialogActions>
