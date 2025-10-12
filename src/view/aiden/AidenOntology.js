@@ -13,7 +13,7 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
     return Array.isArray(initial) ? initial : [];
   });
   const containerRef = useRef(null);
-  const [lastAidenResponse, setLastAidenResponse] = useState(null); // 存储后端返回的 AidenResponse
+  const [lastAidenResponse, setLastAidenResponse] = useState({}); // 存储后端返回的 AidenResponse
   const [chatInputPluginData, setChatInputPluginData] = useState([]);
   // 会话ID：初始化时分配，整个对话周期使用；新建对话时重置
   const [chatId, setChatId] = useState(() => IdUtil.genId('chat'));
@@ -36,11 +36,16 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
       const aiMsgId = IdUtil.genId('ai');
       const aiMsg = { id: aiMsgId, sender: 'assistant', content: '', isLoading: true };
       setMessages((prev) => [...prev, userMsg, aiMsg]);
+      let aidenrRequest = {
+        chat_id: chatId,
+        message: text,
+        history: lastAidenResponse.history || []
+      }
       // 启动流式对话
       try {
         window.chatWithLLMSteam(
           SSE_API_URL,
-          { chat_id: chatId, message: text },
+          aidenrRequest,
           (partialText) => {
             setMessages((prev) =>
               prev.map((m) =>
