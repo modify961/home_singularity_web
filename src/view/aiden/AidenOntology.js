@@ -114,6 +114,7 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
           title="新建对话"
           onClick={() => {
             setMessages([]);
+            setLastAidenResponse({});
             setChatId(IdUtil.genId('chat'));
           }}
         >
