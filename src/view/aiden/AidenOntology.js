@@ -2,33 +2,23 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, IconButton, Typography, Paper } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
-import remarkGfm from 'remark-gfm';
 import ChatInputPlug from './component/ChatInputPlug';
-import { styled } from '@mui/material/styles';
+import ChatMessagePlug from './component/ChatMessagePlug';
+import IdUtil from '../../utils/IdUtil';
 
 const SSE_API_URL = '/chat_to_aiden/chat_to_aiden_steam'
-const MessageContent = styled(Typography)(() => ({
-  '& p': {
-    marginBlockEnd: '0px !important',
-    marginBlockStart: '0px !important',
-  },
-}));
-
-
 const AidenOntology = ({ pluginData, onPluginEvent }) => {
-
   const [messages, setMessages] = useState(() => {
     const initial = pluginData?.messages || [];
     return Array.isArray(initial) ? initial : [];
   });
-
   const containerRef = useRef(null);
+  const [lastAidenResponse, setLastAidenResponse] = useState(null); // 存储后端返回的 AidenResponse
+  const [chatInputPluginData, setChatInputPluginData] = useState([]);
+  // 会话ID：初始化时分配，整个对话周期使用；新建对话时重置
+  const [chatId, setChatId] = useState(() => IdUtil.genId('chat'));
+
   const safeEmit = (eventName, eventData) => {
-    if (typeof onPluginEvent === 'function') {
-      onPluginEvent(eventName, eventData);
-    }
   };
 
   useEffect(() => {
@@ -42,41 +32,39 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
     if (eventName === 'send') {
       const text = (eventData?.text || '').trim();
       if (!text) return;
-
-      // 先加入用户消息
-      const userMsg = { id: Date.now(), sender: 'user', content: text };
-      // 为助手占位一条消息，后续流式更新其内容
-      const aiMsgId = `ai-${Date.now()}`;
-      const aiMsg = { id: aiMsgId, sender: 'assistant', content: '' };
+      const userMsg = { id: IdUtil.genId('user'), sender: 'user', content: text };
+      const aiMsgId = IdUtil.genId('ai');
+      const aiMsg = { id: aiMsgId, sender: 'assistant', content: '', isLoading: true };
       setMessages((prev) => [...prev, userMsg, aiMsg]);
-
-      // 向宿主同步事件
-      safeEmit('send', { text, tags: eventData?.tags || [] });
-
       // 启动流式对话
       try {
         window.chatWithLLMSteam(
           SSE_API_URL,
-          { message: text },
-          // onProgress: 持续更新助手消息内容
+          { chat_id: chatId, message: text },
           (partialText) => {
             setMessages((prev) =>
-              prev.map((m) => (m.id === aiMsgId ? { ...m, content: partialText } : m))
+              prev.map((m) =>
+                m.id === aiMsgId ? { ...m, content: partialText, isLoading: false } : m
+              )
             );
           },
-          // onComplete: 最终文本（可与 onProgress 等价）
-          (finalText) => {
+          (finalText, resp) => {
             setMessages((prev) =>
-              prev.map((m) => (m.id === aiMsgId ? { ...m, content: finalText } : m))
+              prev.map((m) =>
+                m.id === aiMsgId ? { ...m, content: finalText, isLoading: false } : m
+              )
             );
+            if (resp) {
+              setLastAidenResponse(resp);
+              console.log('resp', resp);
+            }
           }
         );
       } catch (err) {
-        // 出错时给出友好提示
         setMessages((prev) =>
           prev.map((m) =>
             m.id === aiMsgId
-              ? { ...m, content: '系统繁忙，请稍后再试' }
+              ? { ...m, content: '系统繁忙，请稍后再试', isLoading: false }
               : m
           )
         );
@@ -102,27 +90,7 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
               {msg.content}
             </Typography>
           ) : (
-            <Box sx={{
-              '& p': { m: 0 },
-              '& pre': { bgcolor: '#f8f9fa', color: '#495057', p: 1, borderRadius: 1, overflowX: 'auto', border: '1px solid #e9ecef' },
-              '& code': { bgcolor: '#f8f9fa', color: '#495057', px: 0.5, py: 0.25, borderRadius: 0.5, border: '1px solid #e9ecef' }
-            }}>
-              <ReactMarkdown
-                children={msg.content}
-                remarkPlugins={[remarkBreaks, remarkGfm]}
-                components={{
-                  p: ({ children }) => <MessageContent variant="body2">{children}</MessageContent>,
-                  code: ({ children }) => <code style={{ backgroundColor: '#f8f9fa', color: '#495057', padding: '2px 4px', borderRadius: '3px', fontSize: '0.875em', border: '1px solid #e9ecef' }}>{children}</code>,
-                  pre: ({ children }) => <pre style={{ backgroundColor: '#f8f9fa', color: '#495057', padding: '12px', borderRadius: '6px', overflowX: 'auto', fontSize: '0.875em', border: '1px solid #e9ecef' }}>{children}</pre>,
-                  table: ({ children }) => <table style={{ borderCollapse: 'collapse', width: '100%', margin: '16px 0' }}>{children}</table>,
-                  thead: ({ children }) => <thead style={{ backgroundColor: '#f5f5f5' }}>{children}</thead>,
-                  tbody: ({ children }) => <tbody>{children}</tbody>,
-                  tr: ({ children }) => <tr>{children}</tr>,
-                  th: ({ children }) => <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{children}</th>,
-                  td: ({ children }) => <td style={{ border: '1px solid #ddd', padding: '8px' }}>{children}</td>
-                }}
-              ></ReactMarkdown>
-            </Box>
+            <ChatMessagePlug pluginData={{ message: msg }} onPluginEvent={safeEmit} />
           )}
         </Paper>
       </Box>
@@ -136,37 +104,27 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
         <IconButton size="small" title="查看历史" onClick={() => safeEmit('view_history')}>
           <HistoryIcon fontSize="small" />
         </IconButton>
-        <IconButton size="small" title="新建对话" onClick={() => { setMessages([]); safeEmit('new_conversation'); }}>
+        <IconButton
+          size="small"
+          title="新建对话"
+          onClick={() => {
+            setMessages([]);
+            setChatId(IdUtil.genId('chat'));
+          }}
+        >
           <AddCircleOutlineIcon fontSize="small" />
         </IconButton>
       </Box>
 
       {/* Chat log */}
       <Box ref={containerRef} sx={{ flex: 1, overflowY: 'auto', py: 1, px: 0.5 }}>
-        {messages.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-            暂无对话，开始提问吧~
-          </Typography>
-        )}
         {messages.map(renderMessage)}
       </Box>
 
       {/* Input */}
       <Box sx={{  bgcolor: 'grey.50' }}>
         <ChatInputPlug
-          pluginData={useMemo(() => {
-            // 规范化并注入默认标签
-            const raw = pluginData || {};
-            let tags = Array.isArray(raw.tags) ? raw.tags : [];
-            // 将字符串标签转为对象结构
-            tags = tags.map((t) =>
-              typeof t === 'string' ? { title: t, content: '', isClose: false } : t
-            );
-            if (!tags.length) {
-              tags = [{ title: '理财咨询', content: '', isClose: true }];
-            }
-            return { ...raw, tags };
-          }, [pluginData])}
+          pluginData={chatInputPluginData}
           onPluginEvent={handleInputEvent}
         />
       </Box>

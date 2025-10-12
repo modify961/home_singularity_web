@@ -8,9 +8,6 @@ const ChatInputPlug = ({ pluginData, onPluginEvent }) => {
   const [tags, setTags] = useState(() => {
     let list = Array.isArray(pluginData?.tags) ? pluginData.tags : [];
     list = list.map((t) => (typeof t === 'string' ? { title: t, content: '', isClose: false } : t));
-    if (!list.length) {
-      list = [{ title: '理财咨询', content: '', isClose: false }];
-    }
     return list;
   });
 

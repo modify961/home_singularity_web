@@ -25,6 +25,7 @@ window.chatWithLLMSteam = async (url,initInfo, onProgress, onComplete) => {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let messageStr = '';
+    let completed = false;
     
     while (true) {
         const { done, value } = await reader.read();
@@ -37,18 +38,35 @@ window.chatWithLLMSteam = async (url,initInfo, onProgress, onComplete) => {
             if (line.startsWith('data: ')) {
                 const data = line.slice(6); // 移除 "data: "
                 if (data === '[DONE]') {
-                    onComplete && onComplete(messageStr);
+                    if (!completed) {
+                        onComplete && onComplete(messageStr);
+                        completed = true;
+                    }
                     break;
                 }
                 
                 try {
                     const parsed = JSON.parse(data);
-                    if (parsed.token) {
+                    // 新流式协议：最终事件 { event: 'final', data: AidenResponse }
+                    if (parsed && parsed.event === 'final') {
+                        const resp = parsed.data || {};
+                        const finalText = (resp && resp.response && resp.response.text) ? resp.response.text : messageStr;
+                        messageStr = finalText;
+                        onProgress && onProgress(finalText);
+                        if (!completed) {
+                            onComplete && onComplete(finalText, resp);
+                            completed = true;
+                        }
+                    } else if (parsed && parsed.token) {
                         messageStr += parsed.token;
                         onProgress && onProgress(messageStr);
-                    } else if (parsed.error) {
+                    } else if (parsed && parsed.error) {
                         messageStr = "系统繁忙，请稍后再试";
                         onProgress && onProgress(messageStr);
+                        if (!completed) {
+                            onComplete && onComplete(messageStr, { error: parsed.error });
+                            completed = true;
+                        }
                         break;
                     }
                 } catch (e) {
