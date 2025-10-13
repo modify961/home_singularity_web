@@ -103,7 +103,7 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', border: '1px solid #e0e0e0', overflow: 'hidden', bgcolor: 'background.paper' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', borderLeft: '1px solid #e0e0e0', overflow: 'hidden', bgcolor: 'background.paper' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, height: 40, px: 1, borderBottom: '1px solid #e0e0e0', bgcolor: 'grey.50' }}>
         <IconButton size="small" title="查看历史" onClick={() => safeEmit('view_history')}>
@@ -128,7 +128,7 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
       </Box>
 
       {/* Input */}
-      <Box sx={{  bgcolor: 'grey.50' }}>
+      <Box >
         <ChatInputPlug
           pluginData={chatInputPluginData}
           onPluginEvent={handleInputEvent}
