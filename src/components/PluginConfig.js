@@ -7,6 +7,10 @@ const pluginConfig = {
       loader: () => import('../view/platform/SyncInfoPlug'),
       type: 'menu'
     },
+    goldnew: {
+      loader: () => import('../view/gold/GoldNewPlug'),
+      type: 'menu'
+    },
   };
 
   export default pluginConfig;
