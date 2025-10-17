@@ -5,6 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        APP_ENV: production
+        BASE_URL: ${BASE_URL:-http://192.168.0.120:8600}
+        WS_URL: ${WS_URL:-ws://192.168.0.120:8600}
     ports:
       - "8500:80"
     restart: unless-stopped

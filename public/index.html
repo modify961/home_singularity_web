@@ -13,16 +13,9 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
    
     <title>家庭助手</title>
+    <!-- Load runtime config before app bundles -->
+    <script src="%PUBLIC_URL%/config.js"></script>
   </head>
-  <script type="text/javascript">
-    window._CONFIG = {}
-    window._CONFIG['type'] = 'dev'
-    // window._CONFIG['BASE_URL'] = 'http://127.0.0.1:8600'
-    // window._CONFIG['WS_URL'] = 'ws://127.0.0.1:8600'
-
-    window._CONFIG['BASE_URL'] = 'http://192.168.0.120:8600'
-    window._CONFIG['WS_URL'] = 'ws://192.168.0.120:8600'
-  </script>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
