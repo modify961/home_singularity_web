@@ -15,7 +15,10 @@ const pluginConfig = {
       loader: () => import('../view/gold/GoldSnapshot'),
       type: 'menu'
     },
-    
+    stockinfo: {
+      loader: () => import('../view/stock/StockInfoPlug'),
+      type: 'menu'
+    },
   };
 
   export default pluginConfig;

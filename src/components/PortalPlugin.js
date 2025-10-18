@@ -2,7 +2,7 @@ import React, { Suspense, useState } from 'react';
 import {Box, Drawer, Button, IconButton} from '@mui/material';
 import usePluginComponent from './PluginComponent';
 import AidenOntology from '../view/aiden/AidenOntology';
-import StockInfoPlug from '../view/stock/StockInfoPlug';
+import MainPortalPlug from '../view/portal/main/MainPortalPlug';
 
 const PluginWrapper = ({ plugin, pluginData, onPluginEvent }) => {
   const PluginComponent = usePluginComponent(plugin);
@@ -18,7 +18,7 @@ const PortalPlugin = ({ pluginData, onPluginEvent }) => {
     <Box sx={{ display: 'flex', width: '100%', height: '100%' }}>
       {/* 左侧区域 - 75%宽度 */}
       <Box sx={{ width: '75%', height: '100%' }}>
-        <StockInfoPlug />
+        <MainPortalPlug />
       </Box>
       
       {/* 右侧区域 - 25%宽度 */}
