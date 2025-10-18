@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, TextField, List, ListItem, ListItemText, Paper, Typography, CircularProgress, Button, IconButton } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { allNews, newById,updateDeletedStatus } from './api';
@@ -183,7 +183,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                       secondary: { noWrap: true }
                     }}
                     primary={item.title || '-'}
-                    secondary={item.source || ''}
+                    secondary={`${item.source || ''}${item.source && item.created_at ? ' : ' : ''}${item.created_at || ''}`}
                   />
                   {loadingDetail && selectedId === item.id && (
                     <Box sx={{ ml: 1, display: 'flex', alignItems: 'center' }}>
