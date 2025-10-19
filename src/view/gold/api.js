@@ -19,3 +19,6 @@ export const getSnapshotByMarkets = (query = {}, headers = {}) => {
 export const updateDeletedStatus = (goldNewsArticle, headers = {}) => {
   return request("/gold_news", "/update_deleted_status", "POST", goldNewsArticle, headers);
 };
+export const generateSummaryCards = (id, headers = {}) => {
+  return request("/gold_news", "/gen_summary_cards", "POST", id, headers);
+};

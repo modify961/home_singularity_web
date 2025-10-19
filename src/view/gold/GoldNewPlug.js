@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Box, TextField, List, ListItem, ListItemText, Paper, Typography, CircularProgress, Button, IconButton } from '@mui/material';
+import { Box, TextField, List, ListItem, ListItemText, Typography, CircularProgress, Button, IconButton } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { allNews, newById,updateDeletedStatus } from './api';
+import GoldNewInfoPlug from './component/GoldNewInfoPlug';
+import { allNews, newById,updateDeletedStatus,generateSummaryCards } from './api';
 import { useDialog } from '../../components/tips/useDialog';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   const { toast,confirm } = useDialog();
@@ -15,6 +14,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   const [article, setArticle] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const detailCache = useRef(new Map());
   const requestSeq = useRef(0);
 
@@ -83,9 +83,49 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
     }
   };
 
+  const handleGenerateSummary = () => {
+    if (!selectedId || generating) return;
+    const id = selectedId;
+    confirm(
+      '确认需要生成摘要？',
+      '确认需要生成摘要？',
+      async () => {
+        setGenerating(true);
+        try {
+          const response = await generateSummaryCards(id);
+          if (response?.code === 200) {
+            toast && toast('生成成功');
+            // 生成成功后刷新详情
+            try {
+              setLoadingDetail(true);
+              const detailResp = await newById(id);
+              const data = (detailResp && detailResp.data) || null;
+              if (data) {
+                detailCache.current.set(id, data);
+              }
+              if (id === selectedId) {
+                setArticle(data);
+              }
+            } catch (e) {
+              toast && toast('刷新详情失败');
+            } finally {
+              setLoadingDetail(false);
+            }
+          } else {
+            toast && toast('生成失败');
+          }
+        } catch (error) {
+          toast && toast('生成失败');
+        } finally {
+          setGenerating(false);
+        }
+      }
+    );
+  };
+
+
   const handleDelete = () => {
     if (!selectedId) return;
-    
     confirm(
       '确认删除',
       '确认要删除这篇文章吗？',
@@ -204,22 +244,6 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
 
       {/* 右侧：文章内容区域 */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
-        {loadingDetail ? (
-          <Box sx={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            zIndex: 1
-          }}>
-            <CircularProgress size={32} />
-          </Box>
-        ) : null}
         {/* 顶部操作栏 */}
         <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',px: 2, }}>
           <Typography sx={{ fontWeight: 500, flex: 1, minWidth: 0 }} noWrap>
@@ -244,7 +268,18 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
             )}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            
+            <Button 
+              variant="outlined" 
+              size="small"
+              onClick={handleGenerateSummary}
+              disabled={!selectedId || generating}
+              sx={{ flexShrink: 0 }}
+              startIcon={generating ? <CircularProgress size={14} /> : null}
+            >
+              {generating ? '生成中...' : '生成摘要'}
+            </Button>
+
+
             <Button 
               variant="outlined" 
               color="error" 
@@ -257,56 +292,12 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
             </Button>
           </Box>
         </Box>
-
-        {/* 下方内容区域：中文译文和英文原文 */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0 }}>
-          {/* 中文译文 */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e0e0e0', overflow: 'auto' }}>
-           {article && article.content_markdown_cn ? (
-              <Paper elevation={0} sx={{ p: 2, border: 'none', borderRadius: 0, height: '100%' }}>
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    a: ({ href, children, ...props }) => (
-                      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
-                        {children}
-                      </a>
-                    )
-                  }}
-                >
-                  {article.content_markdown_cn}
-                </ReactMarkdown>
-              </Paper>
-            ) : (
-              <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <Typography variant="body2" color="text.secondary">请选择左侧文章</Typography>
-              </Box>
-            )}
-          </Box>
-
-          {/* 英文原文 */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-            {article && article.content_markdown ? (
-              <Paper elevation={0} sx={{ p: 2, border: 'none', borderRadius: 0, height: '100%' }}>
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    a: ({ href, children, ...props }) => (
-                      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
-                        {children}
-                      </a>
-                    )
-                  }}
-                >
-                  {article.content_markdown}
-                </ReactMarkdown>
-              </Paper>
-            ) : (
-              <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <Typography variant="body2" color="text.secondary">请选择左侧文章</Typography>
-              </Box>
-            )}
-          </Box>
+        {/* 下方内容区域：交给详情展示插件 */}
+        <Box sx={{height: 'calc(100vh - 48px)' }}>
+          <GoldNewInfoPlug 
+            pluginData={{ article, loadingDetail }} 
+            onPluginEvent={onPluginEvent} 
+          />
         </Box>
       </Box>
     </Box>
