@@ -3,6 +3,7 @@ import { Box, Typography, CircularProgress, IconButton } from '@mui/material';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import { useDialog } from '../../../../components/tips/useDialog';
 import { latestSnapshot } from '../../api';
+import { useBus } from '../../../../utils/BusProvider';
 
 const formatNum = (v) => {
   if (v === null || v === undefined) return '-';
@@ -19,6 +20,7 @@ const toColor = (change) => {
 
 const GoldInfoPlug = () => {
   const { toast } = useDialog();
+  const bus = useBus();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
@@ -101,6 +103,24 @@ const GoldInfoPlug = () => {
                           flexDirection: 'column',
                           gap: 0.75,
                           boxSizing: 'border-box',
+                          cursor: 'pointer', // 支持点击打开右侧抽屉
+                        }}
+                        onClick={() => {
+                          // 点击卡片：在右侧抽屉中打开 GoldSnapshot 插件
+                          bus && bus.publish({
+                            type: 'plugin/open',
+                            source: { component: 'GoldInfoPlug' },
+                            target: { component: 'PortalPlugin' },
+                            payload: {
+                              plugin: 'goldsnapshot',
+                              pluginData: {
+                                type: 'open_from_portal',
+                                data: { market_key: it.market_key },
+                              },
+                              ui: 'drawer',
+                              title: '金价快照',
+                            },
+                          });
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -157,4 +177,3 @@ const GoldInfoPlug = () => {
 };
 
 export default GoldInfoPlug;
-

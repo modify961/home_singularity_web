@@ -17,6 +17,7 @@ import {
   Select,
   MenuItem,
   Button,
+  Checkbox,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -24,9 +25,11 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useDialog } from '../../components/tips/useDialog';
 import { allMarkets, getSnapshotByMarkets } from './api';
 import * as echarts from 'echarts';
+import { useBus } from '../../utils/BusProvider';
 
 const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const { toast } = useDialog();
+  const bus = useBus();
 
   const [loading, setLoading] = useState(false);
   const [markets, setMarkets] = useState([]);
@@ -41,6 +44,58 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     start_date: new Date(),
     end_date: new Date(),
   });
+
+  // 表格选择：选中行的 key 集合（当前页）
+  const [selectedKeys, setSelectedKeys] = useState(() => new Set());
+
+  // 行唯一 key（优先 id，其次 组合键）
+  const rowKey = (row) => String(row.id ?? `${row.market_key}-${row.snapshot_time}`);
+
+  // 切换单行选中
+  const toggleRow = (row) => {
+    const key = rowKey(row);
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  // 全选/取消全选（针对当前页）
+  const toggleAll = () => {
+    const keys = snapshots.map(rowKey);
+    const allChecked = keys.length > 0 && keys.every((k) => selectedKeys.has(k));
+    setSelectedKeys(() => (allChecked ? new Set() : new Set(keys)));
+  };
+
+  // 将选中行转为 AI 标签并通过总线发送给 AidenOntology
+  const sendSelectedAsTags = () => {
+    const list = snapshots.filter((r) => selectedKeys.has(rowKey(r)));
+    if (!list.length) return;
+    const tags = list.map((r) => buildTagFromRow(r));
+    bus && bus.publish({
+      type: 'aiden/tags.add',
+      source: { component: 'GoldSnapshot' },
+      target: { component: 'AidenOntology' },
+      payload: { tags },
+    });
+    toast && toast(`已添加 ${tags.length} 条标签到 AI 输入区`, 'success');
+  };
+
+  // 将一条快照数据构造成标签（title + markdown 内容）
+  const buildTagFromRow = (row) => {
+    const title = `${row.market_name || row.market_key || '-'} @ ${formatDateTime(row.snapshot_time)}`;
+    const md = [
+      `### 黄金价格快照`,
+      `- 市场: ${row.market_name || row.market_key || '-'}`,
+      `- 时间: ${formatDateTime(row.snapshot_time)}`,
+      `- 价格: ${formatNum(row.price)}  涨跌: ${formatNum(row.change)}  涨跌幅: ${row.change_percentage || '-'}`,
+      `- 开盘: ${formatNum(row.open)}  最高: ${formatNum(row.highest)}  最低: ${formatNum(row.lowest)}  昨结: ${formatNum(row.previous_settlement)}`,
+      `- 来源更新时间: ${row.update_time || '-'}`,
+      row.date ? `- 备注/合约: ${row.date}` : null,
+    ].filter(Boolean).join('\n');
+    return { title, content: md, isClose: true };
+  };
 
   // ECharts refs
   const chartElRef = useRef(null);
@@ -327,6 +382,10 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
 
         <Button variant="contained" onClick={handleSearch}>查询</Button>
         <Button variant="outlined" onClick={handleClear}>清空</Button>
+        <Box sx={{ flex: 1 }} />
+        <Button size="small" variant="contained" onClick={sendSelectedAsTags} disabled={!selectedKeys || selectedKeys.size === 0}>
+          加入AI标签
+        </Button>
       </Box>
 
       {/* 图表 + 摘要 */}
@@ -351,6 +410,13 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={snapshots.length > 0 && !snapshots.every((r) => selectedKeys.has(String(r.id ?? `${r.market_key}-${r.snapshot_time}`))) && selectedKeys.size > 0}
+                    checked={snapshots.length > 0 && snapshots.every((r) => selectedKeys.has(String(r.id ?? `${r.market_key}-${r.snapshot_time}`)))}
+                    onChange={toggleAll}
+                  />
+                </TableCell>
                 <TableCell>时间</TableCell>
                 <TableCell>市场</TableCell>
                 <TableCell align="right">价格</TableCell>
@@ -372,6 +438,12 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
                   onMouseEnter={() => showTipForRow(row)}
                   onMouseLeave={clearTip}
                 >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedKeys.has(String(row.id ?? `${row.market_key}-${row.snapshot_time}`))}
+                      onChange={() => toggleRow(row)}
+                    />
+                  </TableCell>
                   <TableCell>{formatDateTime(row.snapshot_time)}</TableCell>
                   <TableCell>{row.market_name || row.market_key || '-'}</TableCell>
                   <TableCell align="right">{formatNum(row.price)}</TableCell>
@@ -387,7 +459,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
               ))}
               {snapshots.length === 0 && !loading && (
                 <TableRow>
-                  <TableCell colSpan={11} align="center">
+                  <TableCell colSpan={12} align="center">
                     <Typography variant="body2" color="text.secondary">暂无数据</Typography>
                   </TableCell>
                 </TableRow>

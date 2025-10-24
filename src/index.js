@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './css/index.css';
 import "./utils/fetchs";
 import reportWebVitals from './reportWebVitals';
+import { BusProvider } from './utils/BusProvider';
 import LoginPlugin from './view/auth/LoginPlugin';
 import ChatApp from './components/ChatApp';
 import { AuthProvider } from './utils/AuthContext';
@@ -37,10 +38,12 @@ const App = () => {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
+  // 将全局事件总线注入整个应用
   <DialogProvider>
+    <BusProvider>
       <App />
+    </BusProvider>
   </DialogProvider>
-
 );
 
 reportWebVitals();

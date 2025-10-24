@@ -11,6 +11,15 @@ const ChatInputPlug = ({ pluginData, onPluginEvent }) => {
     return list;
   });
 
+  // 当外部传入的 pluginData.tags 变化时，更新本地 tags（让 AidenOntology 通过总线注入的标签可见）
+  useEffect(() => {
+    let list = Array.isArray(pluginData?.tags) ? pluginData.tags : [];
+    list = list.map((t) => (typeof t === 'string' ? { title: t, content: '', isClose: false } : t));
+    setTags(list);
+    // 仅依赖 tags 引用变化，避免不必要的重复计算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pluginData?.tags]);
+
   // 根据标签实际高度自适应输入区域的顶部内边距，避免重叠
   const tagsRef = useRef(null);
   // 初始给一个合理的内边距，避免首帧重叠闪动
