@@ -40,7 +40,7 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
               '& pre, & code': { bgcolor: 'grey.100', p: 0.5, borderRadius: 1 }
             }}>
               <ReactMarkdown 
-                remarkPlugins={[remarkGfm]}
+                remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
                 components={{
                   a: ({ href, children, ...props }) => (
                     <a href={href} target="_blank" rel="noopener noreferrer" {...props}>

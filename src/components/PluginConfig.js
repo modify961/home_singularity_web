@@ -3,6 +3,10 @@ const pluginConfig = {
       loader: () => import('../view/base/MeunAndRolePlug'),
       type: 'menu'
     },
+    scheduler: {
+      loader: () => import('../view/base/SchedulerPlug'),
+      type: 'menu'
+    },
     syncinfo: {
       loader: () => import('../view/platform/SyncInfoPlug'),
       type: 'menu'
@@ -18,7 +22,7 @@ const pluginConfig = {
     stockinfo: {
       loader: () => import('../view/stock/StockInfoPlug'),
       type: 'menu'
-    },
+    }
   };
 
   export default pluginConfig;

@@ -4,8 +4,8 @@
 
 ## 环境要求
 
-- Node.js 16+
-- npm 8+ 或 yarn 1.22+
+- Node.js 18.x LTS
+- npm 9+
 
 ## 项目启动
 
@@ -14,12 +14,15 @@
 npm install
 
 # 开发模式
-npm run dev
+npm start
 
 # 生产构建
 npm run build
 ```
 
-## UI组件库
-- [Material UI](https://mui.com/) (@mui/material) - 最新版本
-- [Material Icons](https://mui.com/material-ui/material-icons/) (@mui/icons-material) - 最新版本
+更多详细步骤：见 `docs/Getting-Started.zh-CN.md`。
+
+## UI 组件
+- [Material UI](https://mui.com/)（@mui/material）
+- [Material Icons](https://mui.com/material-ui/material-icons/)（@mui/icons-material）
+
