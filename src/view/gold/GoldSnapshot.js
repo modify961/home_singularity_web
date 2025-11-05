@@ -26,6 +26,7 @@ import { useDialog } from '../../components/tips/useDialog';
 import { allMarkets, getSnapshotByMarkets } from './api';
 import * as echarts from 'echarts';
 import { useBus } from '../../utils/BusProvider';
+import { toLocalDate, formatLocalDateTime } from '../../utils/time';
 
 const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const { toast } = useDialog();
@@ -41,7 +42,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const [pageSize, setPageSize] = useState(100);
 
   const [filters, setFilters] = useState({
-    start_date: new Date(),
+    start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     end_date: new Date(),
   });
 
@@ -49,7 +50,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
 
   // 行唯一 key（优先 id，其次 组合键）
-  const rowKey = (row) => String(row.id ?? `${row.market_key}-${row.snapshot_time}`);
+  const rowKey = (row) => String(row.id ?? `${row.market_key}-${row.time}`);
 
   // 切换单行选中
   const toggleRow = (row) => {
@@ -68,6 +69,8 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     setSelectedKeys(() => (allChecked ? new Set() : new Set(keys)));
   };
 
+  // 时间处理改为使用 utils/time
+
   // 将选中行转为 AI 标签并通过总线发送给 AidenOntology
   const sendSelectedAsTags = () => {
     const list = snapshots.filter((r) => selectedKeys.has(rowKey(r)));
@@ -82,15 +85,41 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     toast && toast(`已添加 ${tags.length} 条标签到 AI 输入区`, 'success');
   };
 
+  // 取值助手：优先使用人民币/克字段，兼容旧字段
+  const getOpen = (r) => (r?.open_cny_per_g ?? r?.open ?? null);
+  const getHigh = (r) => (r?.high_cny_per_g ?? r?.highest ?? r?.high ?? null);
+  const getLow = (r) => (r?.low_cny_per_g ?? r?.lowest ?? r?.low ?? null);
+  const getClose = (r) => (r?.close_cny_per_g ?? r?.price ?? r?.close ?? null);
+
+  // 涨跌与涨跌幅（基于开盘/收盘）
+  const computeChange = (r) => {
+    const o = getOpen(r); const c = getClose(r);
+    if (o == null || c == null) return null;
+    const on = Number(o); const cn = Number(c);
+    if (Number.isNaN(on) || Number.isNaN(cn)) return null;
+    return cn - on;
+  };
+  const computeChangePct = (r) => {
+    const o = getOpen(r); const c = getClose(r);
+    if (o == null || c == null) return null;
+    const on = Number(o); const cn = Number(c);
+    if (Number.isNaN(on) || Number.isNaN(cn) || on === 0) return null;
+    return ((cn - on) / on) * 100;
+  };
+  const formatPercent = (v) => {
+    if (v === null || v === undefined || v === '' || Number.isNaN(Number(v))) return '-';
+    return `${formatNum(v)}%`;
+  };
+
   // 将一条快照数据构造成标签（title + markdown 内容）
   const buildTagFromRow = (row) => {
-    const title = `${row.market_name || row.market_key || '-'} @ ${formatDateTime(row.snapshot_time)}`;
+    const title = `${row.market_name || row.market_key || '-'} @ ${formatLocalDateTime(row.time)}`;
     const md = [
       `### 黄金价格快照`,
       `- 市场: ${row.market_name || row.market_key || '-'}`,
-      `- 时间: ${formatDateTime(row.snapshot_time)}`,
-      `- 价格: ${formatNum(row.price)}  涨跌: ${formatNum(row.change)}  涨跌幅: ${row.change_percentage || '-'}`,
-      `- 开盘: ${formatNum(row.open)}  最高: ${formatNum(row.highest)}  最低: ${formatNum(row.lowest)}  昨结: ${formatNum(row.previous_settlement)}`,
+      `- 时间: ${formatLocalDateTime(row.time)}`,
+      `- 价格(元/克): ${formatNum(getClose(row))}  涨跌: ${formatNum(computeChange(row))}  涨跌幅: ${formatPercent(computeChangePct(row))}`,
+      `- 开盘(元/克): ${formatNum(getOpen(row))}  最高(元/克): ${formatNum(getHigh(row))}  最低(元/克): ${formatNum(getLow(row))}  昨结: ${formatNum(row.previous_settlement)}`,
       `- 来源更新时间: ${row.update_time || '-'}`,
       row.date ? `- 备注/合约: ${row.date}` : null,
     ].filter(Boolean).join('\n');
@@ -147,7 +176,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   // Sorted snapshots for chart (ASC by time)
   const sortedSnapshots = useMemo(() => {
     const list = Array.isArray(snapshots) ? [...snapshots] : [];
-    list.sort((a, b) => new Date(a.snapshot_time) - new Date(b.snapshot_time));
+    list.sort((a, b) => toLocalDate(a.time) - toLocalDate(b.time));
     return list;
   }, [snapshots]);
 
@@ -155,7 +184,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const chartIndexMap = useMemo(() => {
     const map = new Map();
     sortedSnapshots.forEach((it, idx) => {
-      const key = it?.id ?? it?.snapshot_time;
+      const key = it?.id ?? it?.time;
       if (key != null) map.set(String(key), idx);
     });
     return map;
@@ -167,13 +196,15 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     let maxItem = null;
     let minItem = null;
     for (const it of list) {
-      const hi = it?.highest != null ? Number(it.highest) : null;
-      const lo = it?.lowest != null ? Number(it.lowest) : null;
+      const hiV = getHigh(it);
+      const loV = getLow(it);
+      const hi = hiV != null ? Number(hiV) : null;
+      const lo = loV != null ? Number(loV) : null;
       if (hi != null && !Number.isNaN(hi)) {
-        if (!maxItem || hi > maxItem.value) maxItem = { value: hi, time: it.snapshot_time, item: it };
+        if (!maxItem || hi > maxItem.value) maxItem = { value: hi, time: it.time, item: it };
       }
       if (lo != null && !Number.isNaN(lo)) {
-        if (!minItem || lo < minItem.value) minItem = { value: lo, time: it.snapshot_time, item: it };
+        if (!minItem || lo < minItem.value) minItem = { value: lo, time: it.time, item: it };
       }
     }
     return { max: maxItem, min: minItem, count: list.length };
@@ -185,13 +216,13 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     const list = sortedSnapshots;
 
     const categories = list.map(it => {
-      try { return new Date(it.snapshot_time).toLocaleString('zh-CN'); } catch { return String(it.snapshot_time); }
+      try { return toLocalDate(it.time).toLocaleString('zh-CN'); } catch { return String(it.time); }
     });
     const ohlc = list.map(it => [
-      it.open != null ? Number(it.open) : null,
-      it.price != null ? Number(it.price) : null,  // treat price as close
-      it.lowest != null ? Number(it.lowest) : null,
-      it.highest != null ? Number(it.highest) : null,
+      getOpen(it) != null ? Number(getOpen(it)) : null,
+      getClose(it) != null ? Number(getClose(it)) : null,
+      getLow(it) != null ? Number(getLow(it)) : null,
+      getHigh(it) != null ? Number(getHigh(it)) : null,
     ]);
 
     const option = {
@@ -256,7 +287,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const lastHighlightIdxRef = useRef(null);
   const showTipForRow = (row) => {
     if (!chartRef.current || !row) return;
-    const key = String(row.id ?? row.snapshot_time);
+    const key = String(row.id ?? row.time);
     const idx = chartIndexMap.get(key);
     if (idx == null) return;
     if (lastHighlightIdxRef.current != null) {
@@ -283,7 +314,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     };
     const { start_date, end_date } = filters;
     if (start_date || end_date) {
-      query.snapshot_time = [
+      query.time = [
         start_date ? new Date(start_date).toISOString() : null,
         end_date ? new Date(end_date).toISOString() : null,
       ];
@@ -324,18 +355,9 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   };
 
   const handleClear = () => {
-    setFilters({ start_date: new Date(), end_date: new Date() });
+    setFilters({ start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), end_date: new Date() });
     setPage(0);
     setTimeout(() => fetchSnapshots(), 0);
-  };
-
-  const formatDateTime = (v) => {
-    if (!v) return '-';
-    try {
-      return new Date(v).toLocaleString('zh-CN');
-    } catch {
-      return v;
-    }
   };
 
   const formatNum = (v, d = 2) => {
@@ -395,10 +417,10 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
             统计区间：{pageSummary.count || 0} 条
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            最高：{pageSummary.max ? `${pageSummary.max.value} @ ${new Date(pageSummary.max.time).toLocaleString('zh-CN')}` : '-'}
+            最高：{pageSummary.max ? `${pageSummary.max.value} @ ${formatLocalDateTime(pageSummary.max.time)}` : '-'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            最低：{pageSummary.min ? `${pageSummary.min.value} @ ${new Date(pageSummary.min.time).toLocaleString('zh-CN')}` : '-'}
+            最低：{pageSummary.min ? `${pageSummary.min.value} @ ${formatLocalDateTime(pageSummary.min.time)}` : '-'}
           </Typography>
         </Box>
         <Box ref={chartElRef} sx={{ width: '100%', height: 360 }} />
@@ -412,49 +434,45 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
               <TableRow>
                 <TableCell padding="checkbox">
                   <Checkbox
-                    indeterminate={snapshots.length > 0 && !snapshots.every((r) => selectedKeys.has(String(r.id ?? `${r.market_key}-${r.snapshot_time}`))) && selectedKeys.size > 0}
-                    checked={snapshots.length > 0 && snapshots.every((r) => selectedKeys.has(String(r.id ?? `${r.market_key}-${r.snapshot_time}`)))}
+                    indeterminate={snapshots.length > 0 && !snapshots.every((r) => selectedKeys.has(String(r.id ?? `${r.market_key}-${r.time}`))) && selectedKeys.size > 0}
+                    checked={snapshots.length > 0 && snapshots.every((r) => selectedKeys.has(String(r.id ?? `${r.market_key}-${r.time}`)))}
                     onChange={toggleAll}
                   />
                 </TableCell>
                 <TableCell>时间</TableCell>
-                <TableCell>市场</TableCell>
-                <TableCell align="right">价格</TableCell>
+                <TableCell align="right">价格(元/克)</TableCell>
                 <TableCell align="right">涨跌</TableCell>
                 <TableCell align="right">涨跌幅</TableCell>
                 <TableCell align="right">开盘</TableCell>
                 <TableCell align="right">最高</TableCell>
                 <TableCell align="right">最低</TableCell>
-                <TableCell align="right">昨结</TableCell>
-                <TableCell>来源更新时间</TableCell>
-                <TableCell>备注/合约</TableCell>
+                <TableCell align="right">收盘</TableCell>
+                <TableCell>市场</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {snapshots.map((row) => (
                 <TableRow
-                  key={row.id || `${row.market_key}-${row.snapshot_time}` }
+                  key={row.id || `${row.market_key}-${row.time}` }
                   hover
                   onMouseEnter={() => showTipForRow(row)}
                   onMouseLeave={clearTip}
                 >
                   <TableCell padding="checkbox">
                     <Checkbox
-                      checked={selectedKeys.has(String(row.id ?? `${row.market_key}-${row.snapshot_time}`))}
+                      checked={selectedKeys.has(String(row.id ?? `${row.market_key}-${row.time}`))}
                       onChange={() => toggleRow(row)}
                     />
                   </TableCell>
-                  <TableCell>{formatDateTime(row.snapshot_time)}</TableCell>
-                  <TableCell>{row.market_name || row.market_key || '-'}</TableCell>
-                  <TableCell align="right">{formatNum(row.price)}</TableCell>
-                  <TableCell align="right">{formatNum(row.change)}</TableCell>
-                  <TableCell align="right">{row.change_percentage || '-'}</TableCell>
-                  <TableCell align="right">{formatNum(row.open)}</TableCell>
-                  <TableCell align="right">{formatNum(row.highest)}</TableCell>
-                  <TableCell align="right">{formatNum(row.lowest)}</TableCell>
-                  <TableCell align="right">{formatNum(row.previous_settlement)}</TableCell>
-                  <TableCell>{row.update_time || '-'}</TableCell>
-                  <TableCell>{row.date || '-'}</TableCell>
+                  <TableCell>{formatLocalDateTime(row.time)}</TableCell>
+                  <TableCell align="right">{formatNum(getClose(row))}</TableCell>
+                  <TableCell align="right">{formatNum(computeChange(row))}</TableCell>
+                  <TableCell align="right">{formatPercent(computeChangePct(row))}</TableCell>
+                  <TableCell align="right">{formatNum(getOpen(row))}</TableCell>
+                  <TableCell align="right">{formatNum(getHigh(row))}</TableCell>
+                  <TableCell align="right">{formatNum(getLow(row))}</TableCell>
+                  <TableCell align="right">{formatNum(row.close_cny_per_g)}</TableCell>
+                  <TableCell>{row.symbol }</TableCell>
                 </TableRow>
               ))}
               {snapshots.length === 0 && !loading && (

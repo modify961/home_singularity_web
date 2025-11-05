@@ -8,11 +8,11 @@ export const newById = (id, headers = {}) => {
 };
 
 export const allMarkets = (headers = {}) => {
-  return request("/gold", "/all_markets", "POST", {}, headers);
+  return request("/gold_base", "/all_markets", "POST", {}, headers);
 };
 
 export const getSnapshotByMarkets = (query = {}, headers = {}) => {
-  return request("/gold", "/get_snapshot_by_markets", "POST", query, headers);
+  return request("/gold_base", "/get_gold_price", "POST", query, headers);
 };
 
 // 删除新闻的接口
