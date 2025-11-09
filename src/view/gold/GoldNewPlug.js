@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, TextField, List, ListItem, ListItemText, Typography, CircularProgress, Button, IconButton } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import GoldNewInfoPlug from './component/GoldNewInfoPlug';
@@ -9,6 +9,9 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   const { toast,confirm } = useDialog();
   const [loading, setLoading] = useState(false);
   const [news, setNews] = useState([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 20;
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [article, setArticle] = useState(null);
@@ -18,15 +21,15 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   const detailCache = useRef(new Map());
   const requestSeq = useRef(0);
 
-  // 加载全部新闻的方法
-  const loadNews = async (autoSelectFirst = false) => {
+  const loadNews = async (autoSelectFirst = false, targetPage = page) => {
     setLoading(true);
     try {
-      const resp = await allNews();
-      const list = (resp && resp.data) || [];
-      setNews(list);
-      
-      // 只在需要时自动选中第一条
+      const resp = await allNews({ page: targetPage, page_size: pageSize });
+      const list = (resp && resp.data && resp.data.data) || [];   
+      const t = (resp && resp.data && resp.data.pagination && resp.data.pagination.total) || 0;
+      setTotal(t);      
+      setPage(targetPage);
+      setNews(list);    
       if (autoSelectFirst && list.length > 0) {
         const firstId = list[0]?.id;
         if (firstId) {
@@ -35,15 +38,14 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
       }
     } catch (e) {
       console.error(e);
-      toast && toast('加载新闻失败');
+      toast && toast('鍔犺浇鏂伴椈澶辫触');
     } finally {
       setLoading(false);
     }
   };
 
-  // 初始化加载全部新闻
   useEffect(() => {
-    loadNews(true); // 初始化时自动选中第一条
+    loadNews(true, 1); 
   }, []); 
 
   const filteredNews = useMemo(() => {
@@ -54,8 +56,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
 
   const handleSelect = async (id) => {
     if (!id || id === selectedId) return;
-    setSelectedId(id);
-    // 命中缓存则直接渲染，避免不必要请求
+    setSelectedId(id);  
     if (detailCache.current.has(id)) {
       setArticle(detailCache.current.get(id));
       return;
@@ -65,8 +66,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
     try {
       const resp = await newById(id);
       const data = (resp && resp.data) || null;
-      
-      // 仅处理最新的一次请求结果，避免竞态条件
+        
       if (seq === requestSeq.current) {
         setArticle(data);
         if (data) {
@@ -74,9 +74,8 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
         }
       }
     } catch (e) {
-      toast && toast('加载文章详情失败');
-    } finally {
-      // 只有当前请求才设置loading状态
+      toast && toast('鍔犺浇鏂囩珷璇︽儏澶辫触');
+    } finally {  
       if (requestSeq.current === seq) {
         setLoadingDetail(false);
       }
@@ -87,15 +86,14 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
     if (!selectedId || generating) return;
     const id = selectedId;
     confirm(
-      '确认需要生成摘要？',
-      '确认需要生成摘要？',
+      '是否删除',
+      '是否删除',
       async () => {
         setGenerating(true);
         try {
           const response = await generateSummaryCards(id);
           if (response?.code === 200) {
-            toast && toast('生成成功');
-            // 生成成功后刷新详情
+            toast && toast('删除成功');
             try {
               setLoadingDetail(true);
               const detailResp = await newById(id);
@@ -107,15 +105,15 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                 setArticle(data);
               }
             } catch (e) {
-              toast && toast('刷新详情失败');
+              toast && toast('删除异常');
             } finally {
               setLoadingDetail(false);
             }
           } else {
-            toast && toast('生成失败');
+            toast && toast('删除异常');
           }
         } catch (error) {
-          toast && toast('生成失败');
+          toast && toast('删除异常');
         } finally {
           setGenerating(false);
         }
@@ -127,8 +125,8 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   const handleDelete = () => {
     if (!selectedId) return;
     confirm(
-      '确认删除',
-      '确认要删除这篇文章吗？',
+      '是否删除',
+      '删除文章?',
       async () => {
         setDeleting(true);
         try {
@@ -161,11 +159,11 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
               setArticle(null);
             }
           } else {
-            toast('删除失败');
+            toast('删除异常');
           }
         } catch (error) {
-          console.error('删除失败:', error);
-          toast('删除失败');
+          console.error('删除异常:', error);
+          toast('删除异常');
         } finally {
           setDeleting(false);
         }
@@ -175,12 +173,11 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   
   return (
     <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', position: 'relative' }}>
-      {/* 左侧：新闻列表 + 搜索 */}
       <Box sx={{ width: 320, minWidth: 280, maxWidth: 400, borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0', display: 'flex', gap: 1 }}>
           <TextField
             size="small"
-            placeholder="搜索标题"
+            placeholder="搜索"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             fullWidth
@@ -188,10 +185,10 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
           />
           <IconButton
             size="small"
-            onClick={() => loadNews(false)}
+            onClick={() => loadNews(false, page)}
             disabled={loading}
             sx={{ width: 34, height: 34, borderRadius: 0 }}
-            title="刷新列表"
+            title="刷新"
           >
             <RefreshIcon fontSize="small" />
           </IconButton>
@@ -234,20 +231,37 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
               ))}
               {filteredNews.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                  无匹配新闻
+                  没有文章            
                 </Typography>
               )}
             </List>
           )}
         </Box>
+      
+        <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={loading || page <= 1}
+            onClick={() => { if (page > 1) { const p = page - 1; loadNews(true, p); } }}
+          >
+            上一页
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={loading || (page * pageSize) >= total}
+            onClick={() => { if ((page * pageSize) < total) { const p = page + 1; loadNews(true, p); } }}
+          >
+            下一页
+          </Button>
+        </Box>
       </Box>
 
-      {/* 右侧：文章内容区域 */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
-        {/* 顶部操作栏 */}
         <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',px: 2, }}>
           <Typography sx={{ fontWeight: 500, flex: 1, minWidth: 0 }} noWrap>
-            {article?.title || '请选择文章'}
+            {article?.title || '无'}
             {article?.url && (
               <Button
                 variant="text"
@@ -263,7 +277,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                   }
                 }}
               >
-                点击查看原文
+                查看原文
               </Button>
             )}
           </Typography>
@@ -276,7 +290,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
               sx={{ flexShrink: 0 }}
               startIcon={generating ? <CircularProgress size={14} /> : null}
             >
-              {generating ? '生成中...' : '生成摘要'}
+              {generating ? '解析..' : '生成摘要'}
             </Button>
 
 
@@ -288,11 +302,11 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
               disabled={!selectedId || deleting}
               sx={{ flexShrink: 0 }}
             >
-              {deleting ? '删除中...' : '删除'}
+              {deleting ? '删除中..' : '删除'}
             </Button>
           </Box>
         </Box>
-        {/* 下方内容区域：交给详情展示插件 */}
+        {/* 涓嬫柟鍐呭鍖哄煙锛氫氦缁欒鎯呭睍绀烘彃浠?*/}
         <Box sx={{height: 'calc(100vh - 48px)' }}>
           <GoldNewInfoPlug 
             pluginData={{ article, loadingDetail }} 
@@ -305,3 +319,4 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
 };
 
 export default GoldNewPlug;
+

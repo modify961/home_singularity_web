@@ -1,6 +1,6 @@
 
-export const allNews = (stock_code, headers = {}) => {
-  return request("/gold_news", "/all_nws", "POST", {}, headers);
+export const allNews = (query = {}, headers = {}) => {
+  return request("/gold_news", "/all_nws", "POST", query, headers);
 };
 
 export const newById = (id, headers = {}) => {
