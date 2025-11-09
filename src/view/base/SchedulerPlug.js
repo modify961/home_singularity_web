@@ -221,6 +221,7 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                 <TableRow>
                   <TableCell>名称</TableCell>
                   <TableCell>任务Key</TableCell>
+                  <TableCell>序号</TableCell>
                   <TableCell>Cron</TableCell>
                   <TableCell>时区</TableCell>
                   <TableCell>启用</TableCell>
@@ -235,6 +236,7 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                     <TableRow key={row.id} hover selected={!!isSelected} onClick={() => setSelectedJob(row)} sx={{ cursor: 'pointer' }}>
                       <TableCell>{row.name || '-'}</TableCell>
                       <TableCell>{row.job_key || '-'}</TableCell>
+                      <TableCell>{row.sort_num || '-'}</TableCell>
                       <TableCell>{row.cron || '-'}</TableCell>
                       <TableCell>{row.timezone || '-'}</TableCell>
                       <TableCell>

@@ -30,6 +30,7 @@ const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onC
         kwargs_json: pluginData.kwargs_json || '',
         max_instances: pluginData.max_instances ?? 1,
         misfire_grace_time: pluginData.misfire_grace_time ?? 900,
+        sort_num: pluginData.sort_num ?? 10,
         enabled: pluginData.enabled ?? 1,
         notes: pluginData.notes || ''
       });
@@ -44,6 +45,7 @@ const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onC
         kwargs_json: '',
         max_instances: 1,
         misfire_grace_time: 900,
+        sort_num: 10,
         enabled: 1,
         notes: ''
       });
@@ -64,6 +66,14 @@ const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onC
     if (!formData.name?.trim()) newErrors.name = '任务名称不能为空';
     if (!formData.target?.trim()) newErrors.target = '执行目标不能为空';
     if (!formData.cron?.trim()) newErrors.cron = 'Cron 表达式不能为空';
+    if (
+      formData.sort_num === '' ||
+      formData.sort_num === undefined ||
+      formData.sort_num === null ||
+      Number.isNaN(Number(formData.sort_num))
+    ) {
+      newErrors.sort_num = '序号不能为空';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -118,6 +128,20 @@ const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onC
             onChange={(e) => handleInputChange('name', e.target.value)}
             error={!!errors.name}
             helperText={errors.name}
+            required
+            fullWidth
+          />
+          <TextField
+            label="序号"
+            size="small"
+            type="number"
+            value={formData.sort_num ?? 10}
+            onChange={(e) => {
+              const v = e.target.value;
+              handleInputChange('sort_num', v === '' ? '' : parseInt(v, 10));
+            }}
+            error={!!errors.sort_num}
+            helperText={errors.sort_num}
             required
             fullWidth
           />
