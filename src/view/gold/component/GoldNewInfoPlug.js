@@ -13,6 +13,15 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
 
   const leftContent = langCN ? article?.content_markdown_cn : article?.content_markdown;
 
+  // 对右侧 cards 进行排序：将 summary_type 为 article_summary 的卡片置顶
+  const sortedCards = Array.isArray(article?.cards)
+    ? [...article.cards].sort((a, b) => {
+        const pa = a && a.summary_type === 'article_summary' ? 0 : 1;
+        const pb = b && b.summary_type === 'article_summary' ? 0 : 1;
+        return pa - pb;
+      })
+    : [];
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', position: 'relative', bgcolor: '#fafafa' }}>
       {loadingDetail && (
@@ -80,7 +89,7 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
           </Box>
         ) : Array.isArray(article.cards) && article.cards.length > 0 ? (
           <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {article.cards.map(card => (
+            {sortedCards.map(card => (
               <Paper key={card.card_id || card.title} elevation={0} sx={{ p: 2, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: '#fff' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }} noWrap>
                   {card.title || '摘要'}
@@ -105,11 +114,35 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
                 )}
 
                 {/* 关键词 Chips */}
-                {Array.isArray(card.keywords) && card.keywords.length > 0 && (
+                {(Array.isArray(card.keywords) && card.keywords.length > 0) || (card.emotion && String(card.emotion).trim()) ? (
                   <>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>关键词</Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
-                      {card.keywords.map((kw, idx) => (
+                      {/* 情绪优先显示，红色背景 */}
+                      {!!(card.emotion && String(card.emotion).trim()) && (
+                        <Chip
+                          key={`emotion_${card.card_id || card.title}`}
+                          size="small"
+                          label={String(card.emotion).trim()}
+                          color={
+                            String(card.emotion).trim() === '积极' ? 'error' :
+                            (String(card.emotion).trim() === '中性' ? 'warning' :
+                            (String(card.emotion).trim() === '消极' ? 'success' : 'default'))
+                          }
+                          variant="outlined"
+                          sx={{
+                            borderColor:
+                              (String(card.emotion).trim() === '积极' ? 'success.main' :
+                              (String(card.emotion).trim() === '中性' ? 'warning.main' :
+                              (String(card.emotion).trim() === '消极' ? 'error.main' : 'divider'))),
+                            color:
+                              (String(card.emotion).trim() === '积极' ? 'success.main' :
+                              (String(card.emotion).trim() === '中性' ? 'warning.main' :
+                              (String(card.emotion).trim() === '消极' ? 'error.main' : 'text.secondary')))
+                          }}
+                        />
+                      )}
+                      {Array.isArray(card.keywords) && card.keywords.map((kw, idx) => (
                         <Chip key={`${String(kw)}_${idx}`} size="small" label={kw}
                           variant="outlined"
                           sx={{ borderColor: 'divider', bgcolor: 'grey.50' }}
@@ -117,7 +150,7 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
                       ))}
                     </Box>
                   </>
-                )}
+                ) : null}
 
                 {/* 相关问题 */}
                 {Array.isArray(card.questions) && card.questions.length > 0 && (

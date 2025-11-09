@@ -1,8 +1,9 @@
 ﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Box, TextField, List, ListItem, ListItemText, Typography, CircularProgress, Button, IconButton } from '@mui/material';
+import { Box, TextField, List, ListItem, ListItemText, Typography, CircularProgress, Button, IconButton, Chip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import GoldNewInfoPlug from './component/GoldNewInfoPlug';
 import { allNews, newById,updateDeletedStatus,generateSummaryCards } from './api';
+import { nyToBeijing } from '../../utils/time';
 import { useDialog } from '../../components/tips/useDialog';
 
 const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
@@ -74,7 +75,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
         }
       }
     } catch (e) {
-      toast && toast('鍔犺浇鏂囩珷璇︽儏澶辫触');
+      toast && toast('数据异常');
     } finally {  
       if (requestSeq.current === seq) {
         setLoadingDetail(false);
@@ -199,7 +200,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
               <CircularProgress size={24} />
             </Box>
           ) : (
-            <List dense>
+            <List>
               {filteredNews.map((item) => (
                 <ListItem
                   key={item.id}
@@ -209,6 +210,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                     cursor: 'pointer',
                     backgroundColor: selectedId === item.id ? '#f0f7ff !important' : 'transparent',
                     borderLeft: selectedId === item.id ? '3px solid #1976d2' : '3px solid transparent',
+                    py: 1,
                     '&:hover': { 
                       backgroundColor: selectedId === item.id ? '#f0f7ff !important' : '#f5f5f5 !important' 
                     }
@@ -219,8 +221,34 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                       primary: { noWrap: true },
                       secondary: { noWrap: true }
                     }}
-                    primary={item.title || '-'}
-                    secondary={`${item.source || ''}${item.source && item.created_at ? ' : ' : ''}${item.created_at || ''}`}
+                    primary={item.summary || '-'}
+                    secondary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, mt: 0.25 }}>
+                        {!!(item.emotion && String(item.emotion).trim()) && (
+                          <Chip
+                            size="small"
+                            label={String(item.emotion).trim()}
+                            variant="outlined"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.72rem',
+                              bgcolor: 'grey.50',
+                              borderColor:
+                                (String(item.emotion).trim() === '积极' ? 'success.main' :
+                                (String(item.emotion).trim() === '中性' ? 'warning.main' :
+                                (String(item.emotion).trim() === '消极' ? 'error.main' : 'divider'))),
+                              color:
+                                (String(item.emotion).trim() === '积极' ? 'success.main' :
+                                (String(item.emotion).trim() === '中性' ? 'warning.main' :
+                                (String(item.emotion).trim() === '消极' ? 'error.main' : 'text.secondary')))
+                            }}
+                          />
+                        )}
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          {`${item.source && item.published_at ? ' · ' : ''}${item.published_at ? nyToBeijing(item.published_at) : ''}`}
+                        </Typography>
+                      </Box>
+                    }
                   />
                   {loadingDetail && selectedId === item.id && (
                     <Box sx={{ ml: 1, display: 'flex', alignItems: 'center' }}>
@@ -306,7 +334,6 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
             </Button>
           </Box>
         </Box>
-        {/* 涓嬫柟鍐呭鍖哄煙锛氫氦缁欒鎯呭睍绀烘彃浠?*/}
         <Box sx={{height: 'calc(100vh - 48px)' }}>
           <GoldNewInfoPlug 
             pluginData={{ article, loadingDetail }} 
@@ -319,4 +346,3 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
 };
 
 export default GoldNewPlug;
-
