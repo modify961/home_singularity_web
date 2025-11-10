@@ -125,7 +125,7 @@ const AidenOntology = ({ pluginData, onPluginEvent }) => {
                 const pluginKey = cmd?.plugin || cmd?.name || cmd?.key;
                 if (action && pluginKey && String(action).toLowerCase().includes('open')) {
                   bus && bus.publish({
-                    type: 'plugin/open',
+                    type: 'drawer/open',
                     source: { component: 'AidenOntology' },
                     target: { component: 'PortalPlugin' },
                     payload: {

@@ -9,14 +9,6 @@ import { addOrEditJob } from '../api';
 const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onClose }) => {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
-  const timezoneOptions = [
-    { label: '北京（Asia/Shanghai）', value: 'Asia/Shanghai' },
-    { label: '美国东部（America/New_York）', value: 'America/New_York' },
-    { label: '美国西部（America/Los_Angeles）', value: 'America/Los_Angeles' },
-    { label: '英国（Europe/London）', value: 'Europe/London' },
-    { label: 'UTC', value: 'UTC' },
-  ];
-
   useEffect(() => {
     if (isOpen && pluginData && pluginData.id) {
       setFormData({
@@ -25,7 +17,7 @@ const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onC
         name: pluginData.name || '',
         target: pluginData.target || '',
         cron: pluginData.cron || '',
-        timezone: pluginData.timezone || '',
+        timezone:'Asia/Shanghai',
         args_json: pluginData.args_json || '',
         kwargs_json: pluginData.kwargs_json || '',
         max_instances: pluginData.max_instances ?? 1,
@@ -165,21 +157,6 @@ const SchedulerInfoPlug = ({ pluginData = {}, onPluginEvent, isOpen = false, onC
             required
             fullWidth
           />
-          <TextField
-            select
-            label="使用时区"
-            size="small"
-            value={formData.timezone || 'Asia/Shanghai'}
-            onChange={(e) => handleInputChange('timezone', e.target.value)}
-            fullWidth
-          >
-            {timezoneOptions.map(opt => (
-              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-            ))}
-            {formData.timezone && !timezoneOptions.some(o => o.value === formData.timezone) && (
-              <MenuItem value={formData.timezone}>{formData.timezone}</MenuItem>
-            )}
-          </TextField>
           <TextField
             label="最大并发数"
             size="small"

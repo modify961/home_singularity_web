@@ -26,7 +26,7 @@ const PortalPlugin = ({ pluginData, onPluginEvent }) => {
   const bus = useBus();
 
   // 订阅“打开插件”消息
-  useSubscribe({ type: 'plugin/open', to: { component: 'PortalPlugin' } }, (evt) => {
+  useSubscribe({ type: 'drawer/open', to: { component: 'PortalPlugin' } }, (evt) => {
     const p = evt?.payload || {};
     const key = p.plugin;
     if (!key) return;
@@ -37,7 +37,7 @@ const PortalPlugin = ({ pluginData, onPluginEvent }) => {
   });
 
   // 订阅“关闭插件”消息
-  useSubscribe({ type: 'plugin/close', to: { component: 'PortalPlugin' } }, () => {
+  useSubscribe({ type: 'drawer/close', to: { component: 'PortalPlugin' } }, () => {
     setDrawerOpen(false);
   });
 
@@ -67,17 +67,25 @@ const PortalPlugin = ({ pluginData, onPluginEvent }) => {
         <AidenOntology pluginData={pluginData} onPluginEvent={onPluginEvent} />
       </Box>
 
-      {/* 左侧抽屉：仅在左侧容器内显示，不覆盖右侧 AidenOntology */}
       <Drawer
         anchor="left"
         open={drawerOpen}
         onClose={handleCloseDrawer}
-        // 避免遮罩挡住右侧 AidenOntology：隐藏遮罩，并将容器限制为左侧面板
-        ModalProps={{ container: () => leftRef.current, keepMounted: true, hideBackdrop: true }}
-        // 纸张宽度使用左侧容器的 100%（左容器本身占页面 75%）
-        sx={{ '& .MuiDrawer-paper': { width: '75%', boxSizing: 'border-box' } }}
+        ModalProps={{ 
+          disableEnforceFocus: true,
+          keepMounted: false,
+          style: { position: 'absolute', left: 0 },
+          container: () => leftRef.current, keepMounted: true, hideBackdrop: true 
+        }}
+        sx={{ 
+          '& .MuiDrawer-paper': { width: '75%' },
+          boxSizing: 'border-box',
+          border: 'none',
+          boxShadow: 'none',
+ 
+        }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%',overflow: 'hidden'}}>
           {/* 抽屉标题栏：标题居左，右侧提供关闭按钮 */}
           <Box sx={{ height: 44, display: 'flex', alignItems: 'center', px: 1, borderBottom: '1px solid #eee', fontWeight: 600 }}>
             <Box sx={{ flex: 1, textAlign: 'left' }}>{drawerTitle}</Box>
@@ -85,13 +93,12 @@ const PortalPlugin = ({ pluginData, onPluginEvent }) => {
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
-          <Box sx={{ flex: 1, minHeight: 0 }}>
+          <Box sx={{ flex: 1, minHeight: 0,paddingRight: 1.5}}>
             {activePlugin && (
               <PluginWrapper
                 plugin={activePlugin}
                 pluginData={activePluginData}
                 onPluginEvent={(eventName, eventData) => {
-                  // 插件内部事件统一转发为“plugin/event”
                   bus && bus.publish({
                     type: 'plugin/event',
                     source: { component: String(activePlugin) },

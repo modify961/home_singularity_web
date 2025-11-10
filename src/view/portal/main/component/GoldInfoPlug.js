@@ -193,7 +193,7 @@ const GoldInfoPlug = () => {
                             }}
                             onClick={() => {
                               bus && bus.publish({
-                                type: 'plugin/open',
+                                type: 'drawer/open',
                                 source: { component: 'GoldInfoPlug' },
                                 target: { component: 'PortalPlugin' },
                                 payload: {

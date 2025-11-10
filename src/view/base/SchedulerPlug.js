@@ -223,7 +223,6 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                   <TableCell>任务Key</TableCell>
                   <TableCell>序号</TableCell>
                   <TableCell>Cron</TableCell>
-                  <TableCell>时区</TableCell>
                   <TableCell>启用</TableCell>
                   <TableCell>操作</TableCell>
                 </TableRow>
@@ -238,7 +237,6 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                       <TableCell>{row.job_key || '-'}</TableCell>
                       <TableCell>{row.sort_num || '-'}</TableCell>
                       <TableCell>{row.cron || '-'}</TableCell>
-                      <TableCell>{row.timezone || '-'}</TableCell>
                       <TableCell>
                         <Switch size="small" checked={!!enabledOn} onChange={(e) => { e.stopPropagation(); handleToggleEnableRow(row, e.target.checked); }} />
                       </TableCell>
