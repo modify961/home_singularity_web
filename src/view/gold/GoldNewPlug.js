@@ -244,6 +244,19 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                             }}
                           />
                         )}
+                        {!!(item.source && String(item.source).trim()) && (
+                          <Chip
+                            size="small"
+                            label={String(item.source).trim()}
+                            variant="outlined"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.72rem',
+                              bgcolor: 'grey.50',
+                            }}
+                          />
+                        )}
+                        
                         <Typography variant="caption" color="text.secondary" noWrap>
                           {`${item.source && item.published_at ? ' · ' : ''}${item.published_at ? nyToBeijing(item.published_at) : ''}`}
                         </Typography>

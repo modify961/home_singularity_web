@@ -117,9 +117,6 @@ const GoldInfoPlug = () => {
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
           黄金交易基本信息
         </Typography>
-        <IconButton size="small" onClick={() => setCollapsed((v) => !v)}>
-          {collapsed ? <ExpandMore /> : <ExpandLess />}
-        </IconButton>
       </Box>
 
       {/* 内容区域 */}
