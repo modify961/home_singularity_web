@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
-import { Box, Paper, Typography, CircularProgress, IconButton, Chip } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Paper, Typography, CircularProgress, IconButton, Chip, Button } from '@mui/material';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { newById, updateDeletedStatus, generateSummaryCards } from '../api';
+import { useDialog } from '../../../components/tips/useDialog';
 
 const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
-  const article = pluginData?.article || null;
-  const loadingDetail = !!pluginData?.loadingDetail;
+  const { toast, confirm } = useDialog();
+  const incomingArticle = pluginData?.article || null;
+  const baseLoadingDetail = !!pluginData?.loadingDetail;
+
+  const [article, setArticle] = useState(incomingArticle);
+  const [generating, setGenerating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  useEffect(() => {
+    setArticle(incomingArticle || null);
+  }, [incomingArticle]);
 
   // 左侧内容语言切换：默认中文，可切换到英文
   const [langCN, setLangCN] = useState(true);
@@ -22,9 +34,72 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
       })
     : [];
 
+  const overlayLoading = baseLoadingDetail || localLoading;
+
+  const handleGenerateSummary = () => {
+    const id = article?.id;
+    if (!id || generating) return;
+    confirm(
+      '是否总结条码',
+      '是否总结条码',
+      async () => {
+        setGenerating(true);
+        try {
+          const response = await generateSummaryCards(id);
+          if (response?.code === 200) {
+            toast && toast('生成成功');
+            try {
+              setLocalLoading(true);
+              const detailResp = await newById(id);
+              const data = (detailResp && detailResp.data) || null;
+              setArticle(data);
+            } catch (e) {
+              toast && toast('总结异常');
+            } finally {
+              setLocalLoading(false);
+            }
+            onPluginEvent && onPluginEvent('refresh', { type: 'generate', id });
+          } else {
+            toast && toast('总结异常');
+          }
+        } catch (error) {
+          toast && toast('总结异常');
+        } finally {
+          setGenerating(false);
+        }
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    const id = article?.id;
+    if (!id || deleting) return;
+    confirm(
+      '是否删除',
+      '删除文章?',
+      async () => {
+        setDeleting(true);
+        try {
+          const response = await updateDeletedStatus({ id, is_deleted: true });
+          if (response?.code === 200) {
+            toast && toast('删除成功');
+            setArticle(null);
+            onPluginEvent && onPluginEvent('refresh', { type: 'delete', id });
+          } else {
+            toast && toast('删除异常');
+          }
+        } catch (error) {
+          toast && toast('删除异常');
+        } finally {
+          setDeleting(false);
+        }
+      }
+    );
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', position: 'relative', bgcolor: '#fafafa' }}>
-      {loadingDetail && (
+      {overlayLoading && (
         <Box sx={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -83,12 +158,54 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
 
       {/* 右侧：cards 摘要卡片 */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', bgcolor: '#fafafa' }}>
+        {/* 操作按钮栏：左侧“查看原文”，右侧“生成摘要/删除”（置于卡片上方） */}
+        {article && (
+          <Box sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {article?.url && (
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => window.open(article.url, '_blank')}
+                  sx={{ 
+                    fontSize: '0.8rem',
+                    textTransform: 'none',
+                    color: 'primary.main',
+                    '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' }
+                  }}
+                >
+                  查看原文
+                </Button>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button 
+                variant="outlined" 
+                size="small"
+                onClick={handleGenerateSummary}
+                disabled={generating}
+                startIcon={generating ? <CircularProgress size={14} /> : null}
+              >
+                {generating ? '解析..' : '生成摘要'}
+              </Button>
+              <Button 
+                variant="outlined" 
+                color="error" 
+                size="small"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? '删除中..' : '删除'}
+              </Button>
+            </Box>
+          </Box>
+        )}
         {!article ? (
-          <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <Box sx={{ p: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
             <Typography variant="body2" color="text.secondary">请选择左侧文章</Typography>
           </Box>
         ) : Array.isArray(article.cards) && article.cards.length > 0 ? (
-          <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {sortedCards.map(card => (
               <Paper key={card.card_id || card.title} elevation={0} sx={{ p: 2, borderRadius: 1, border: '1px solid', borderColor: 'divider', bgcolor: '#fff' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }} noWrap>

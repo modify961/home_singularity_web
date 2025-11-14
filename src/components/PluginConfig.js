@@ -15,6 +15,10 @@ const pluginConfig = {
       loader: () => import('../view/gold/GoldNewPlug'),
       type: 'menu'
     },
+    goldnewcontent: {
+      loader: () => import('../view/gold/component/GoldNewInfoPlug'),
+      type: 'menu'
+    },
     goldsnapshot: {
       loader: () => import('../view/gold/GoldSnapshot'),
       type: 'menu'

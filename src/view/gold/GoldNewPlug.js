@@ -39,7 +39,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
       }
     } catch (e) {
       console.error(e);
-      toast && toast('鍔犺浇鏂伴椈澶辫触');
+      toast && toast('加载失败');
     } finally {
       setLoading(false);
     }
@@ -87,8 +87,8 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
     if (!selectedId || generating) return;
     const id = selectedId;
     confirm(
-      '是否删除',
-      '是否删除',
+      '是否总结条码',
+      '是否总结条码',
       async () => {
         setGenerating(true);
         try {
@@ -106,15 +106,15 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                 setArticle(data);
               }
             } catch (e) {
-              toast && toast('删除异常');
+              toast && toast('总结异常');
             } finally {
               setLoadingDetail(false);
             }
           } else {
-            toast && toast('删除异常');
+            toast && toast('总结异常');
           }
         } catch (error) {
-          toast && toast('删除异常');
+          toast && toast('总结异常');
         } finally {
           setGenerating(false);
         }
@@ -174,6 +174,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   
   return (
     <Box sx={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', position: 'relative' }}>
+      {/* 左侧列表 */}
       <Box sx={{ width: 320, minWidth: 280, maxWidth: 400, borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0', display: 'flex', gap: 1 }}>
           <TextField
@@ -298,59 +299,57 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
           </Button>
         </Box>
       </Box>
-
+      {/* 右侧详情 */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
-        <Box sx={{ p: 1, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',px: 2, }}>
-          <Typography sx={{ fontWeight: 500, flex: 1, minWidth: 0 }} noWrap>
-            {article?.title || '无'}
-            {article?.url && (
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => window.open(article.url, '_blank')}
-                sx={{ 
-                  flexShrink: 0,
-                  fontSize: '0.75rem',
-                  textTransform: 'none',
-                  color: '#1976d2',
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                  }
-                }}
-              >
-                查看原文
-              </Button>
-            )}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button 
-              variant="outlined" 
-              size="small"
-              onClick={handleGenerateSummary}
-              disabled={!selectedId || generating}
-              sx={{ flexShrink: 0 }}
-              startIcon={generating ? <CircularProgress size={14} /> : null}
-            >
-              {generating ? '解析..' : '生成摘要'}
-            </Button>
-
-
-            <Button 
-              variant="outlined" 
-              color="error" 
-              size="small"
-              onClick={handleDelete}
-              disabled={!selectedId || deleting}
-              sx={{ flexShrink: 0 }}
-            >
-              {deleting ? '删除中..' : '删除'}
-            </Button>
-          </Box>
-        </Box>
-        <Box sx={{height: 'calc(100vh - 48px)' }}>
+        <Box sx={{height: 'calc(100vh - 0px)' }}>
           <GoldNewInfoPlug 
             pluginData={{ article, loadingDetail }} 
-            onPluginEvent={onPluginEvent} 
+            onPluginEvent={async (evt, payload) => {
+              if (evt === 'refresh') {
+                if (payload?.type === 'delete' && payload?.id) {
+                  const id = payload.id;
+                  const updatedNews = news.filter(item => item.id !== id);
+                  setNews(updatedNews);
+                  detailCache.current.delete(id);
+                  const currentIndex = news.findIndex(item => item.id === id);
+                  let nextSelectedId = null;
+                  if (updatedNews.length > 0) {
+                    if (currentIndex < updatedNews.length) {
+                      nextSelectedId = updatedNews[currentIndex]?.id;
+                    } else if (currentIndex > 0) {
+                      nextSelectedId = updatedNews[currentIndex - 1]?.id;
+                    } else {
+                      nextSelectedId = updatedNews[0]?.id;
+                    }
+                  }
+                  setSelectedId(nextSelectedId);
+                  if (nextSelectedId) {
+                    await handleSelect(nextSelectedId);
+                  } else {
+                    setArticle(null);
+                  }
+                } else if (payload?.type === 'generate' && payload?.id) {
+                  const id = payload.id;
+                  try {
+                    setLoadingDetail(true);
+                    const detailResp = await newById(id);
+                    const data = (detailResp && detailResp.data) || null;
+                    if (data) {
+                      detailCache.current.set(id, data);
+                    }
+                    if (id === selectedId) {
+                      setArticle(data);
+                    }
+                  } catch (e) {
+                  } finally {
+                    setLoadingDetail(false);
+                  }
+                } else {
+                  loadNews(true, page);
+                }
+              }
+              onPluginEvent && onPluginEvent(evt, payload);
+            }}
           />
         </Box>
       </Box>
