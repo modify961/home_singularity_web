@@ -35,6 +35,35 @@ const formatPercent = (v) => {
   return `${(n * 100).toFixed(2)}%`;
 };
 
+const safeNumber = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const formatBias = (idx) => {
+  const n = safeNumber(idx);
+  if (n == null) return '';
+  if (n > 5.5) return '偏多';
+  if (n < 4.5) return '偏空';
+  return '中性';
+};
+
+const buildPredChange = (pred, lastClose) => {
+  const pv = safeNumber(pred);
+  if (pv == null) return null;
+  const lc = safeNumber(lastClose);
+  let ratio = null;
+  let dir = 'flat';
+  let color = 'text.secondary';
+  if (lc != null && lc !== 0) {
+    const diff = pv - lc;
+    ratio = diff / lc;
+    dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
+    color = dir === 'up' ? 'error.main' : (dir === 'down' ? 'success.main' : 'text.secondary');
+  }
+  return { value: pv, ratio, dir, color };
+};
+
 const GoldInfoPlug = () => {
   const { toast } = useDialog();
   const [loading, setLoading] = useState(false);
@@ -118,6 +147,60 @@ const GoldInfoPlug = () => {
     );
   };
 
+  const PredictionItem = ({ label, info }) => {
+    if (!info) return null;
+    return (
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5,
+          borderRadius: 1,
+          border: '1px solid #eee',
+          px: 0.75,
+          py: 0.25,
+        }}
+      >
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {formatNum(info.value)}
+        </Typography>
+        {info.ratio != null && (
+          <Typography variant="caption" sx={{ color: info.color }}>
+            {info.ratio >= 0 ? '+' : ''}{(info.ratio * 100).toFixed(2)}%
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
+  // 简报补充信息：买入指数 + 价格点预测 + 一个月走势
+  let metrics = null;
+  let buyIndex = null;
+  let midForecast = null;
+  let lastCloseDaily = null;
+  try {
+    if (brief && brief.metrics_json) {
+      metrics = JSON.parse(brief.metrics_json);
+      // 优先使用简报表中的独立 buy_index 字段，退回到 metrics_json 内的值
+      buyIndex = (brief.buy_index != null ? brief.buy_index : (metrics?.buy_index ?? null));
+      midForecast = metrics?.mid_term_forecast || null;
+      lastCloseDaily = metrics?.daily?.last_close ?? null;
+    }
+  } catch (e) {
+    console.error('parse metrics_json failed', e);
+  }
+
+  const pred1d = brief?.pred_close_1d ?? null;
+  const pred1w = brief?.pred_close_1w ?? null;
+  const pred1m = brief?.pred_close_1m ?? null;
+
+  const pred1dInfo = buildPredChange(pred1d, lastCloseDaily);
+  const pred1wInfo = buildPredChange(pred1w, lastCloseDaily);
+  const pred1mInfo = buildPredChange(pred1m, lastCloseDaily);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', bgcolor: 'white', height: '100%' }}>
       <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -171,10 +254,58 @@ const GoldInfoPlug = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 2 }}>
               <CircularProgress size={22} />
             </Box>
-          ) : brief && brief.summary_markdown ? (
-            <Box sx={{ p: 1.25, border: '1px solid #eee', borderRadius: 1, bgcolor: '#fafafa' }}>
-              <ReactMarkdown>{brief.summary_markdown}</ReactMarkdown>
-            </Box>
+          ) : brief ? (
+            <>
+              {(buyIndex != null || pred1dInfo || pred1wInfo || pred1mInfo || midForecast) && (
+                <Box
+                  sx={{
+                    mb: 1.25,
+                    p: 1.25,
+                    border: '1px solid #eee',
+                    borderRadius: 1,
+                    bgcolor: '#fff',
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    模型预测
+                    {brief.report_date ? `（${brief.report_date}）` : ''}
+                  </Typography>
+
+                  {buyIndex != null && (
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      买入指数：{formatNum(buyIndex)} / 10（{formatBias(buyIndex)}）
+                    </Typography>
+                  )}
+
+                  {(pred1dInfo || pred1wInfo || pred1mInfo) && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 0.5 }}>
+                      {pred1dInfo && <PredictionItem label="1日" info={pred1dInfo} />}
+                      {pred1wInfo && <PredictionItem label="1周" info={pred1wInfo} />}
+                      {pred1mInfo && <PredictionItem label="1个月" info={pred1mInfo} />}
+                    </Box>
+                  )}
+
+                  {midForecast && (
+                    <Typography variant="body2" color="text.secondary">
+                      一个月走势：{midForecast.direction || '未知'}
+                      {midForecast.range_low != null && midForecast.range_high != null && (
+                        <>
+                          ，预计区间 {formatNum(midForecast.range_low)} ~ {formatNum(midForecast.range_high)}
+                        </>
+                      )}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              {brief.summary_markdown ? (
+                <Box sx={{ p: 1.25, border: '1px solid #eee', borderRadius: 1, bgcolor: '#fafafa' }}>
+                  <ReactMarkdown>{brief.summary_markdown}</ReactMarkdown>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">暂无简报内容</Typography>
+              )}
+            </>
           ) : (
             <Typography variant="body2" color="text.secondary">暂无简报</Typography>
           )}
@@ -185,4 +316,3 @@ const GoldInfoPlug = () => {
 };
 
 export default GoldInfoPlug;
-
