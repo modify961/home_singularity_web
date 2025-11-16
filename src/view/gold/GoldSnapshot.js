@@ -35,6 +35,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
   const [loading, setLoading] = useState(false);
   const [markets, setMarkets] = useState([]);
   const [marketKey, setMarketKey] = useState('');
+  const [klineType, setKlineType] = useState('5min');
 
   const [snapshots, setSnapshots] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -156,7 +157,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
     if (!marketKey) return;
     fetchSnapshots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marketKey, page, pageSize]);
+  }, [marketKey, page, pageSize, klineType]);
 
   // Init chart once
   useEffect(() => {
@@ -311,6 +312,7 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
       page: page + 1, // API 从1开始
       page_size: pageSize,
       market_key: marketKey,
+      kline_type: klineType
     };
     const { start_date, end_date } = filters;
     if (start_date || end_date) {
@@ -377,13 +379,33 @@ const GoldSnapshot = ({ pluginData, onPluginEvent }) => {
             labelId="market-select-label"
             label="交易市场"
             value={marketKey}
-            onChange={(e) => setMarketKey(e.target.value)}
+            onChange={(e) => {
+              setMarketKey(e.target.value);
+              setPage(0);
+            }}
           >
             {markets.map((m) => (
               <MenuItem key={m.market_key} value={m.market_key}>
                 {m.market_name || m.market_key}
               </MenuItem>
             ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="kline-type-select-label">K线周期</InputLabel>
+          <Select
+            labelId="kline-type-select-label"
+            label="K线周期"
+            value={klineType}
+            onChange={(e) => {
+              setKlineType(e.target.value);
+              setPage(0);
+            }}
+          >
+            <MenuItem value="5min">5分钟</MenuItem>
+            {marketKey === 'XAUUSD' && <MenuItem value="4h">4小时</MenuItem>}
+            <MenuItem value="daily">日线</MenuItem>
           </Select>
         </FormControl>
 

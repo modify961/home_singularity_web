@@ -178,6 +178,18 @@ const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
                           }}
                         />
                       )}
+                      {!!(item.topic && String(item.topic).trim()) && (
+                        <Chip
+                          size="small"
+                          label={String(item.topic).trim()}
+                          variant="outlined"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.72rem',
+                            bgcolor: 'grey.50',
+                          }}
+                        />
+                      )}
                       {!!(item.source && String(item.source).trim()) && (
                         <Chip
                           size="small"

@@ -220,7 +220,6 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
               <TableHead>
                 <TableRow>
                   <TableCell>名称</TableCell>
-                  <TableCell>任务Key</TableCell>
                   <TableCell>序号</TableCell>
                   <TableCell>Cron</TableCell>
                   <TableCell>启用</TableCell>
@@ -234,7 +233,6 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                   return (
                     <TableRow key={row.id} hover selected={!!isSelected} onClick={() => setSelectedJob(row)} sx={{ cursor: 'pointer' }}>
                       <TableCell>{row.name || '-'}</TableCell>
-                      <TableCell>{row.job_key || '-'}</TableCell>
                       <TableCell>{row.sort_num || '-'}</TableCell>
                       <TableCell>{row.cron || '-'}</TableCell>
                       <TableCell>
@@ -310,7 +308,6 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                   <TableCell>ID</TableCell>
                   <TableCell>状态</TableCell>
                   <TableCell>开始</TableCell>
-                  <TableCell>结束</TableCell>
                   <TableCell>耗时(ms)</TableCell>
                   <TableCell>消息</TableCell>
                   <TableCell>异常</TableCell>
@@ -324,7 +321,6 @@ const SchedulerPlug = ({ pluginData, onPluginEvent }) => {
                       <Chip size="small" color={row.status === 'success' ? 'success' : (row.status ? 'error' : 'default')} label={row.status || '-'} />
                     </TableCell>
                     <TableCell>{formatDateTime(row.started_at)}</TableCell>
-                    <TableCell>{formatDateTime(row.finished_at)}</TableCell>
                     <TableCell>{row.duration_ms ?? '-'}</TableCell>
                     <TableCell title={row.message || ''} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.message || '-'}</TableCell>
                     <TableCell title={row.exception || ''} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.exception || '-'}</TableCell>
