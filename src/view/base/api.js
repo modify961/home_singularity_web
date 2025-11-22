@@ -39,3 +39,20 @@ export const runJobOnce = ( id, headers = {}) => {
 export const schedulerLogs = ( query = {}, headers = {}) => {
     return request("/base_scheduler", "/logs", "POST", query, headers);
 };
+
+// 文档管理相关接口
+export const listDocuments = (query = {}, headers = {}) => {
+    return request("/document_base", "/list", "POST", query, headers);
+};
+
+export const getDocumentById = (id, headers = {}) => {
+    return request("/document_base", "/by_id", "POST", id, headers);
+};
+
+export const saveDocument = (documentInfo, headers = {}) => {
+    return request("/document_base", "/save", "POST", documentInfo, headers);
+};
+
+export const deleteDocument = (id, headers = {}) => {
+    return request("/document_base", "/delete", "POST", id, headers);
+};

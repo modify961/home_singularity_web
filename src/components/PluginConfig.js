@@ -26,6 +26,10 @@ const pluginConfig = {
     stockinfo: {
       loader: () => import('../view/stock/StockInfoPlug'),
       type: 'menu'
+    },
+    documentinfo: {
+      loader: () => import('../view/base/DocumentInfoPlug'),
+      type: 'menu'
     }
   };
 
