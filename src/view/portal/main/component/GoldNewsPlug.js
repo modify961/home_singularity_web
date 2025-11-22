@@ -3,7 +3,7 @@ import { Box, TextField, List, ListItem, ListItemText, Typography, CircularProgr
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useDialog } from '../../../../components/tips/useDialog';
 import { nyToBeijing } from '../../../../utils/time';
-import { allNews, newById } from '../../../gold/api';
+import { allNews, newById, updateReadStatus } from '../../../gold/api';
 import { useBus } from '../../../../utils/BusProvider';
 
 const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
@@ -20,6 +20,21 @@ const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
   const detailCache = useRef(new Map());
   const requestSeq = useRef(0);
 
+  const sortNewsList = (list = []) => {
+    const parseTime = (value) => {
+      const t = value ? Date.parse(value) : NaN;
+      return Number.isNaN(t) ? 0 : t;
+    };
+    return [...list].sort((a, b) => {
+      const ra = a?.is_read || 0;
+      const rb = b?.is_read || 0;
+      if (ra !== rb) return ra - rb;
+      const ta = parseTime(a?.published_at);
+      const tb = parseTime(b?.published_at);
+      return tb - ta;
+    });
+  };
+
   const loadNews = async (autoSelectFirst = false, targetPage = page) => {
     setLoading(true);
     try {
@@ -28,9 +43,10 @@ const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
       const t = (resp && resp.data && resp.data.pagination && resp.data.pagination.total) || 0;
       setTotal(t);
       setPage(targetPage);
-      setNews(list);
-      if (autoSelectFirst && list.length > 0) {
-        const firstId = list[0]?.id;
+      const sortedList = sortNewsList(list);
+      setNews(sortedList);
+      if (autoSelectFirst && sortedList.length > 0) {
+        const firstId = sortedList[0]?.id;
         if (firstId) {
           handleSelect(firstId);
         }
@@ -55,6 +71,21 @@ const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
 
   const handleSelect = async (id) => {
     setSelectedId(id);
+    const markReadSilently = async () => {
+      const item = news.find(n => n.id === id);
+      if (!item || item.is_read === 1) return;
+      setNews(prev => sortNewsList(prev.map(n => n.id === id ? { ...n, is_read: 1 } : n)));
+      if (detailCache.current.has(id)) {
+        const cached = detailCache.current.get(id) || {};
+        detailCache.current.set(id, { ...cached, is_read: 1 });
+      }
+      try {
+        await updateReadStatus({ id, is_read: 1 });
+      } catch (err) {
+        // ignore silently; UI 已更新
+      }
+    };
+    markReadSilently();
     if (detailCache.current.has(id)) {
       const data = detailCache.current.get(id);
       bus && bus.publish({
@@ -77,7 +108,10 @@ const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
     const seq = ++requestSeq.current;
     try {
       const resp = await newById(id);
-      const data = (resp && resp.data) || null;
+      const dataRaw = (resp && resp.data) || null;
+      const data = dataRaw && news.find(n => n.id === id && n.is_read === 1)
+        ? { ...dataRaw, is_read: 1 }
+        : dataRaw;
       if (seq === requestSeq.current) {
         if (data) {
           detailCache.current.set(id, data);
@@ -158,6 +192,17 @@ const GoldNewsPlug = ({ pluginData, onPluginEvent }) => {
                   primary={item.summary || '-'}
                   secondary={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, mt: 0.25 }}>
+                      <Chip
+                        size="small"
+                        label={item.is_read === 0 ? "未读" : "已读"}
+                        variant="outlined"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.72rem',
+                          bgcolor: 'grey.50',
+                          borderColor: item.is_read === 0 ? 'uccess.main' : 'error.main'
+                        }}
+                      />
                       {!!(item.emotion && String(item.emotion).trim()) && (
                         <Chip
                           size="small"

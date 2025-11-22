@@ -22,3 +22,7 @@ export const updateDeletedStatus = (goldNewsArticle, headers = {}) => {
 export const generateSummaryCards = (id, headers = {}) => {
   return request("/gold_news", "/gen_summary_cards", "POST", id, headers);
 };
+
+export const updateReadStatus = (goldNewsArticle, headers = {}) => {
+  return request("/gold_news", "/update_read_status", "POST", goldNewsArticle, headers);
+};

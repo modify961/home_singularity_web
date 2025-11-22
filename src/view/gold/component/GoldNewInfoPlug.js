@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, Paper, Typography, CircularProgress, IconButton, Chip, Button } from '@mui/material';
 import GTranslateIcon from '@mui/icons-material/GTranslate';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { newById, updateDeletedStatus, generateSummaryCards } from '../api';
+import { newById, updateDeletedStatus, generateSummaryCards, updateReadStatus } from '../api';
 import { useDialog } from '../../../components/tips/useDialog';
 
 const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
@@ -14,7 +14,9 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
   const [article, setArticle] = useState(incomingArticle);
   const [generating, setGenerating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
+  const lastAutoReadIdRef = useRef(null);
 
   useEffect(() => {
     setArticle(incomingArticle || null);
@@ -35,6 +37,38 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
     : [];
 
   const overlayLoading = baseLoadingDetail || localLoading;
+
+  const handleUpdateReadStatus = async (targetStatus = true, options = {}) => {
+    const id = article?.id;
+    if (!id || markingRead) return;
+    setMarkingRead(true);
+    try {
+      const resp = await updateReadStatus({ id, is_read: targetStatus });
+      if (resp?.code === 200) {
+        setArticle(prev => (prev && prev.id === id ? { ...prev, is_read: !!targetStatus } : prev));
+        if (!options?.silent) {
+          toast && toast(targetStatus ? '已标记已读' : '已标记未读');
+        }
+        onPluginEvent && onPluginEvent('refresh', { type: 'read', id, is_read: targetStatus });
+      } else if (!options?.silent) {
+        toast && toast('更新已读状态失败');
+      }
+    } catch (error) {
+      if (!options?.silent) {
+        toast && toast('更新已读状态失败');
+      }
+    } finally {
+      setMarkingRead(false);
+    }
+  };
+
+  useEffect(() => {
+    const id = article?.id;
+    if (!id || article?.is_read !== false) return;
+    if (lastAutoReadIdRef.current === id) return;
+    lastAutoReadIdRef.current = id;
+    handleUpdateReadStatus(true, { silent: true });
+  }, [article?.id, article?.is_read]);
 
   const handleGenerateSummary = () => {
     const id = article?.id;
@@ -179,6 +213,16 @@ const GoldNewInfoPlug = ({ pluginData, onPluginEvent }) => {
               )}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                variant="outlined"
+                color={article?.is_read ? 'warning' : 'success'}
+                size="small"
+                onClick={() => handleUpdateReadStatus(!article?.is_read)}
+                disabled={markingRead}
+                startIcon={markingRead ? <CircularProgress size={14} /> : null}
+              >
+                {markingRead ? '更新中...' : (article?.is_read ? '标记未读' : '标记已读')}
+              </Button>
               <Button 
                 variant="outlined" 
                 size="small"

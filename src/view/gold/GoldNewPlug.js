@@ -22,6 +22,21 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
   const detailCache = useRef(new Map());
   const requestSeq = useRef(0);
 
+  const sortNewsList = (list = []) => {
+    const parseTime = (value) => {
+      const t = value ? Date.parse(value) : NaN;
+      return Number.isNaN(t) ? 0 : t;
+    };
+    return [...list].sort((a, b) => {
+      const ra = a?.is_read ? 1 : 0;
+      const rb = b?.is_read ? 1 : 0;
+      if (ra !== rb) return ra - rb;
+      const ta = parseTime(a?.published_at);
+      const tb = parseTime(b?.published_at);
+      return tb - ta;
+    });
+  };
+
   const loadNews = async (autoSelectFirst = false, targetPage = page) => {
     setLoading(true);
     try {
@@ -30,9 +45,10 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
       const t = (resp && resp.data && resp.data.pagination && resp.data.pagination.total) || 0;
       setTotal(t);      
       setPage(targetPage);
-      setNews(list);    
-      if (autoSelectFirst && list.length > 0) {
-        const firstId = list[0]?.id;
+      const sortedList = sortNewsList(list);
+      setNews(sortedList);    
+      if (autoSelectFirst && sortedList.length > 0) {
+        const firstId = sortedList[0]?.id;
         if (firstId) {
           handleSelect(firstId);
         }
@@ -225,6 +241,17 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                     primary={item.summary || '-'}
                     secondary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, mt: 0.25 }}>
+                        <Chip
+                          size="small"
+                          label={item.is_read === 0 ? "未读" : "已读"}
+                          variant="outlined"
+                          sx={{
+                            height: 20,
+                            fontSize: '0.72rem',
+                            bgcolor: 'grey.50',
+                            borderColor: item.is_read === 0 ? 'uccess.main' : 'error.main'
+                          }}
+                        />
                         {!!(item.emotion && String(item.emotion).trim()) && (
                           <Chip
                             size="small"
@@ -309,7 +336,7 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                 if (payload?.type === 'delete' && payload?.id) {
                   const id = payload.id;
                   const updatedNews = news.filter(item => item.id !== id);
-                  setNews(updatedNews);
+                  setNews(sortNewsList(updatedNews));
                   detailCache.current.delete(id);
                   const currentIndex = news.findIndex(item => item.id === id);
                   let nextSelectedId = null;
@@ -327,6 +354,18 @@ const GoldNewPlug = ({ pluginData, onPluginEvent }) => {
                     await handleSelect(nextSelectedId);
                   } else {
                     setArticle(null);
+                  }
+                } else if (payload?.type === 'read' && payload?.id) {
+                  const { id, is_read } = payload;
+                  setNews(prev => sortNewsList(prev.map(item => (
+                    item.id === id ? { ...item, is_read } : item
+                  ))));
+                  if (detailCache.current.has(id)) {
+                    const cached = detailCache.current.get(id) || {};
+                    detailCache.current.set(id, { ...cached, is_read });
+                  }
+                  if (id === selectedId) {
+                    setArticle(prev => (prev ? { ...prev, is_read } : prev));
                   }
                 } else if (payload?.type === 'generate' && payload?.id) {
                   const id = payload.id;
